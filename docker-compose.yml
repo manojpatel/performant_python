@@ -1,0 +1,65 @@
+services:
+  # -------------------------------------------------------------------------
+  # Application being instrumented
+  # -------------------------------------------------------------------------
+  performant-python-app:
+    build: .
+    container_name: performant-python-app
+    ports:
+      - "8080:8080"
+    environment:
+      - ENABLE_TRACING=true # Toggle this to false to disable tracing
+      - OTEL_SERVICE_NAME=performant-python
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - jaeger
+      - redis
+    restart: on-failure
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Minimal Observability Stack (Jaeger + OpenSearch)
+  # -------------------------------------------------------------------------
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - SPAN_STORAGE_TYPE=opensearch
+      - ES_SERVER_URLS=http://opensearch:9200
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+    depends_on:
+      - opensearch
+    restart: unless-stopped
+
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - DISABLE_SECURITY_PLUGIN=true
+      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin@123"
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    restart: unless-stopped
+
+volumes:
+  opensearch-data:
+  redis-data:
