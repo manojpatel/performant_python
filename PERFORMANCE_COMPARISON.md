@@ -47,7 +47,7 @@ This document demonstrates that **optimized Python can compete with Node.js** in
 ### Full-Text Search (10,000 documents)
 
 | Stack | Index Time | Search (p50) | Search (p99) |
-|-------|-----------|--------------|--------------||
+|-------|-----------|--------------|--------------|
 | **This Python (Tantivy)** | **117ms** | **4.4ms** | **8.2ms** |
 | Node.js (Elasticsearch) | 850ms | 15ms | 45ms |
 | Python (Whoosh) | 2,100ms | 25ms | 120ms |
