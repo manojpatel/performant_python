@@ -10,6 +10,7 @@ A production-ready, ultra-high-performance Python backend stack leveraging Rust/
 - **Event Loop**: [uvloop 0.21+](https://github.com/MagicStack/uvloop) - Ultra-fast asyncio (C/libuv)
 
 ### Data & Processing
+- **Database**: [PostgreSQL 17](https://postgresql.org/) - Production relational database
 - **Caching**: [Valkey 8.0](https://valkey.io/) - High-performance Redis fork (C)
 - **DataFrames**: [Polars 1.17+](https://pola.rs/) - Lightning-fast dataframes (Rust)
 - **SQL/OLAP**: [DuckDB 1.1.3](https://duckdb.org/) - Analytics SQL engine (C++)
@@ -36,11 +37,12 @@ docker-compose up -d
 docker-compose logs -f performant-python-app
 
 # Run tests
-cd test_suite && ./test_valkey_cache.sh
+cd performance_test_suite && ./test_valkey_cache.sh
 ```
 
 **Service URLs:**
 - **Application**: http://localhost:8080
+- **PostgreSQL**: localhost:5432 (production database)
 - **Jaeger UI**: http://localhost:16686 (distributed tracing)
 - **OpenSearch**: http://localhost:9200 (trace storage)
 - **Valkey**: localhost:6379 (cache)
@@ -49,43 +51,69 @@ cd test_suite && ./test_valkey_cache.sh
 
 ```
 performant_python/
-├── src/                    # Application code
-│   ├── main.py            # FastAPI app & endpoints
-│   ├── services.py        # Business logic (Polars, DuckDB)
-│   ├── valkey_cache.py    # Valkey caching decorator (xxhash keys)
-│   ├── compression.py     # Zstandard compression middleware
-│   ├── database.py        # DuckDB connection pool
-│   ├── models.py          # Pydantic models
-│   ├── fast_models.py     # msgspec models (faster)
-│   ├── extras.py          # Search & templating
-│   └── telemetry.py       # OpenTelemetry tracing
-├── test_suite/            # All tests & benchmarks
-│   ├── test_valkey_cache.sh # Valkey cache validation
-│   ├── test_decorator.sh  # Caching pattern comparison
-│   ├── benchmark.py       # HTTP benchmarking
-│   └── profile_app.sh     # Performance profiling
-├── logs/                  # Application logs
-├── docker-compose.yml     # Service orchestration
-├── Dockerfile            # Application container
-└── requirements.txt      # Python dependencies
+├── src/                           # Application code
+│   ├── main.py                    # FastAPI app entry point
+│   ├── lib/                       # Core libraries
+│   │   ├── valkey_cache.py        # Valkey caching decorator (xxhash keys)
+│   │   ├── duckdb_client.py       # DuckDB connection pool
+│   │   └── postgres_client.py     # PostgreSQL asyncpg client
+│   ├── middleware/                # Middleware components
+│   │   ├── compression.py         # Zstandard compression
+│   │   └── telemetry.py           # OpenTelemetry tracing
+│   ├── samples/                   # Demo/test/benchmark endpoints
+│   │   ├── samples_routes.py      # All sample API routes
+│   │   ├── services.py            # Business logic (Polars, DuckDB)
+│   │   ├── pydantic_models.py     # Pydantic models
+│   │   ├── msgspec_models.py      # msgspec models (faster)
+│   │   ├── extras.py              # Search & templating (Tantivy, MiniJinja)
+│   │   ├── pg_pydantic_dict.py    # PostgreSQL production endpoints
+│   │   ├── pg_polars_benchmark.py # Pydantic + Polars benchmarks
+│   │   ├── pg_polars_msgspec.py   # msgspec + Polars benchmarks
+│   │   └── pg_duckdb_comparison.py # PostgreSQL vs DuckDB comparison
+│   └── routes/                    # Additional route modules
+├── performance_test_suite/        # All tests & benchmarks
+│   ├── test_valkey_cache.sh       # Valkey cache validation
+│   ├── test_valkey_cache.py       # Python cache tests
+│   ├── test_decorator.sh          # Caching pattern comparison
+│   ├── benchmark.py               # HTTP benchmarking
+│   └── profile_app.sh             # Performance profiling
+├── logs/                          # Application logs
+├── db/                            # Database files
+├── docker-compose.yml             # Service orchestration
+├── Dockerfile                     # Application container
+├── requirements.txt               # Python dependencies
+├── PERFORMANCE_COMPARISON.md      # Detailed benchmarks
+└── ADDITIONAL_BENCHMARKS.md       # PostgreSQL & msgspec metrics
 ```
 
 ## 🌐 API Endpoints
 
-### Caching Demonstrations
-- **`POST /duckdb-cached`** - Valkey LRU cache with detailed timing metrics
-- **`POST /duckdb-cached-decorator`** - Same using `@valkey_cache` decorator
+### Production Endpoints (PostgreSQL)
+- **`POST /samples/events`** - Create user event
+- **`GET /samples/events/{user_id}`** - Get user events with pagination
+- **`POST /samples/events/bulk`** - Bulk insert events for testing
+- **`GET /samples/analytics/summary`** - Analytics summary (PostgreSQL aggregations)
+- **`GET /samples/analytics/conversion-funnel`** - Conversion funnel metrics
 
-### Data Processing
-- **`POST /process`** - Pydantic validation + Polars DataFrames
-- **`POST /process-msgspec`** - msgspec validation (3-5x faster)
-- **`POST /duckdb`** - DuckDB SQL aggregations
+### Caching Demonstrations
+- **`GET /samples/duckdb-cached`** - Valkey LRU cache with detailed timing metrics
+- **`GET /samples/duckdb-cached-decorator`** - Same using `@valkey_cache` decorator
+
+### Data Processing & Benchmarks
+- **`POST /samples/batch`** - Pydantic validation + Polars DataFrames
+- **`POST /samples/batch-msgspec`** - msgspec validation (3-5x faster)
+- **`POST /samples/duckdb`** - DuckDB SQL aggregations
+- **`GET /samples/pg/benchmark`** - PostgreSQL + Polars benchmarks
+- **`GET /samples/pg/benchmark-all`** - Compare all PostgreSQL approaches
+- **`GET /samples/pg/duckdb-compare`** - PostgreSQL vs DuckDB analytics
 
 ### Other Features
-- **`GET /`** - Hello World
-- **`GET /search?q=query`** - Full-text search (Tantivy)
-- **`POST /render`** - HTML rendering (MiniJinja)
-- **`GET /benchmark/{size}`** - Internal benchmark
+- **`GET /`** - Health check / API info
+- **`GET /samples/`** - Sample routes root
+- **`GET /samples/search?q=query`** - Full-text search (Tantivy)
+- **`POST /samples/render`** - HTML rendering (MiniJinja)
+- **`GET /samples/benchmark/{size}`** - Dataset generation benchmark
+- **`GET /samples/large-json`** - Large JSON response test
 
 ## 📊 Performance
 
@@ -97,10 +125,12 @@ performant_python/
 
 **Benchmark Results (Dec 2024):**
 ```
-50,000 records processed:     294ms total (50ms Polars)
-10,000 records processed:      90ms total (39ms Polars)
- Search 10k documents:         4.4ms
- Cache hit response:           2.1ms
+50,000 records processed:      294ms total (50ms Polars)
+PostgreSQL analytics (7.2K):   29.5ms average  
+PostgreSQL bulk inserts:       26K inserts/second
+Cache hit response:            2.1ms (Valkey)
+Search 10k documents:          4.4ms (Tantivy)
+msgspec validation:            20x faster than Pydantic
 ```
 
 **📈 See [PERFORMANCE_COMPARISON.md](PERFORMANCE_COMPARISON.md) for:**
@@ -111,13 +141,15 @@ performant_python/
 
 ## 🧪 Testing
 
-All test scripts in `test_suite/`:
+All test scripts in `performance_test_suite/`:
 
 ```bash
-cd test_suite
+cd performance_test_suite
 
 # Test Valkey cache (hit/miss scenarios)
 ./test_valkey_cache.sh
+# Or use Python version (requires: pip install httpx)
+python test_valkey_cache.py
 
 # Compare manual vs decorator caching
 ./test_decorator.sh
@@ -131,9 +163,9 @@ python benchmark.py
 
 ## 🎯 Key Features
 
-### 1. Valkey LRU Caching with xxhash
+###  1. Valkey LRU Caching with xxhash
 ```python
-from src.valkey_cache import valkey_cache
+from src.lib.valkey_cache import valkey_cache
 
 @valkey_cache(ttl=300, key_prefix="user_data")
 async def get_user_data(user_id: int):
@@ -143,7 +175,7 @@ async def get_user_data(user_id: int):
 
 ### 2. DuckDB Connection Pooling
 ```python
-from src.database import get_pool
+from src.lib.duckdb_client import get_pool
 
 async def query_data():
     pool = get_pool()
@@ -152,7 +184,22 @@ async def query_data():
     return result
 ```
 
-### 3. Polars DataFrames
+### 3. PostgreSQL with asyncpg
+```python
+from src.lib.postgres_client import get_postgres
+
+async def query_events(user_id: int, limit: int = 100):
+    """Query PostgreSQL with asyncpg (3x faster than psycopg)"""
+    pool = await get_postgres()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM user_events WHERE user_id = $1 LIMIT $2",
+            user_id, limit
+        )
+    return rows
+```
+
+### 4. Polars DataFrames
 ```python
 import polars as pl
 
@@ -222,12 +269,15 @@ granian --workers 4 --loop uvloop src.main:app
 
 ## 📝 Code Highlights
 
-- **`src/main.py`**: FastAPI app with uvloop, Valkey initialization, zstd compression
-- **`src/valkey_cache.py`**: Generic `@valkey_cache` decorator with xxhash keys
-- **`src/compression.py`**: Zstandard HTTP compression middleware
-- **`src/services.py`**: Polars & DuckDB processing with caching patterns
-- **`src/database.py`**: Thread-safe DuckDB connection pooling
-- **`src/extras.py`**: Tantivy search & MiniJinja templating
+- **`src/main.py`**: FastAPI app with uvloop, Valkey, PostgreSQL initialization, compression
+- **`src/lib/valkey_cache.py`**: Generic `@valkey_cache` decorator with xxhash keys
+- **`src/lib/postgres_client.py`**: asyncpg connection pool management
+- **`src/lib/duckdb_client.py`**: Thread-safe DuckDB connection pooling
+- **`src/middleware/compression.py`**: Zstandard HTTP compression middleware
+- **`src/middleware/telemetry.py`**: OpenTelemetry instrumentation
+- **`src/samples/services.py`**: Polars & DuckDB processing with caching patterns
+- **`src/samples/extras.py`**: Tantivy search & MiniJinja templating
+- **`src/samples/pg_*.py`**: PostgreSQL benchmarks and production examples
 
 ## 🔧 Development
 
@@ -254,8 +304,8 @@ All libraries are latest stable versions (December 2024):
 ## 🎓 Learn More
 
 - **[PERFORMANCE_COMPARISON.md](PERFORMANCE_COMPARISON.md)** - Detailed Python vs Node.js vs Rust benchmarks
-- **[test_suite/README.md](test_suite/README.md)** - Complete testing guide
-- **Artifacts** - Implementation plans, walkthroughs, caching patterns
+- **[ADDITIONAL_BENCHMARKS.md](ADDITIONAL_BENCHMARKS.md)** - PostgreSQL metrics, msgspec benchmarks
+- **[performance_test_suite/README.md](performance_test_suite/README.md)** - Complete testing guide
 
 ## 📄 License
 
