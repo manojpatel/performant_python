@@ -5,9 +5,9 @@ This directory contains all testing, benchmarking, and profiling scripts for the
 ## 📂 Directory Contents
 
 ### Cache Testing
-- **`test_cache.sh`** - Tests Redis LRU cache hit/miss scenarios
+- **`test_valkey_cache.sh`** - Tests Valkey LRU cache hit/miss scenarios
 - **`test_decorator.sh`** - Compares manual vs decorator caching implementations
-- **`test_redis_cache.py`** - Python-based cache testing (requires httpx)
+- **`test_valkey_cache.py`** - Python-based cache testing (requires httpx)
 
 ### Performance Benchmarking
 - **`benchmark.py`** - HTTP endpoint benchmarking with concurrent requests
@@ -21,7 +21,7 @@ This directory contains all testing, benchmarking, and profiling scripts for the
 ### Run Cache Tests
 ```bash
 cd test_suite
-./test_cache.sh          # Test Redis cache functionality
+./test_valkey_cache.sh    # Test Valkey cache functionality
 ./test_decorator.sh      # Compare caching patterns
 ```
 
@@ -42,7 +42,7 @@ cd test_suite
 
 ### Cache Performance
 - **Cache MISS**: ~800-1500ms (DuckDB processing)
-- **Cache HIT**: ~5-10ms (Redis retrieval)
+- **Cache HIT**: ~5-10ms (Valkey retrieval)
 - **Speedup**: 100-150x for hot data
 
 ### Endpoint Benchmarks

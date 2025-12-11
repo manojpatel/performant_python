@@ -103,7 +103,7 @@ async def duckdb_cached_endpoint(batch_id: str, size: int = 100):
     DuckDB processing with Valkey caching (manual logic).
     Demonstrates: Valkey caching, xxhash cache keys, zstandard compression
     """
-    data = generate_large_dataset(size)
+    data = await generate_large_dataset(size)
     return await get_batch_stats_cached(batch_id, data)
 
 
@@ -113,7 +113,7 @@ async def duckdb_decorator_endpoint(batch_id: str, size: int = 100):
     DuckDB processing with @valkey_cache decorator.
     Demonstrates: Decorator-based caching with Valkey
     """
-    data = generate_large_dataset(size)
+    data = await generate_large_dataset(size)
     return await get_batch_stats_with_decorator(batch_id, data)
 
 

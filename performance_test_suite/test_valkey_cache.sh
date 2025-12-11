@@ -1,5 +1,5 @@
 #!/bin/bash
-# Redis Cache Testing Script
+# Valkey Cache Testing Script
 # Tests cache HIT and MISS scenarios with timing
 
 set -e
@@ -20,7 +20,7 @@ PAYLOAD='{
 }'
 
 echo "======================================================================"
-echo " Redis Cache Testing Suite"
+echo " Valkey Cache Testing Suite"
 echo "======================================================================"
 echo ""
 
@@ -31,9 +31,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "➤ Sending request to /duckdb-cached..."
 
-response1=$(curl -s -X POST "$BASE_URL/duckdb-cached" \
-  -H "Content-Type: application/json" \
-  -d "$PAYLOAD")
+response1=$(curl -s "$BASE_URL/samples/duckdb-cached?batch_id=$BATCH_ID&size=5")
 
 echo "$response1" | jq '.'
 echo ""
@@ -46,14 +44,12 @@ sleep 1
 
 # TEST 2: Cache HIT (second request)
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo " TEST 2: CACHE HIT (Second Request - data served from Redis)"
+echo " TEST 2: CACHE HIT (Second Request - data served from Valkey)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "➤ Sending same request again..."
 
-response2=$(curl -s -X POST "$BASE_URL/duckdb-cached" \
-  -H "Content-Type: application/json" \
-  -d "$PAYLOAD")
+response2=$(curl -s "$BASE_URL/samples/duckdb-cached?batch_id=$BATCH_ID&size=5")
 
 echo "$response2" | jq '.'
 echo ""
@@ -78,9 +74,7 @@ PAYLOAD_2='{
 
 echo "➤ Sending request with different batch_id..."
 
-response3=$(curl -s -X POST "$BASE_URL/duckdb-cached" \
-  -H "Content-Type: application/json" \
-  -d "$PAYLOAD_2")
+response3=$(curl -s "$BASE_URL/samples/duckdb-cached?batch_id=$BATCH_ID_2&size=2")
 
 echo "$response3" | jq '.'
 echo ""
@@ -97,9 +91,9 @@ echo "✅ All tests completed successfully!"
 echo ""
 echo "🔑 Key Observations:"
 echo "  • First request (MISS): Data fetched from DuckDB (~10-50ms)"
-echo "  • Second request (HIT): Data served from Redis (<5ms)"
+echo "  • Second request (HIT): Data served from Valkey (<5ms)"
 echo "  • Cache provides 10-100x speedup for hot data"
 echo "  • Different batch_id correctly triggers cache MISS"
 echo ""
-echo "💡 Redis LRU cache working as expected!"
+echo "💡 Valkey LRU cache working as expected!"
 echo ""

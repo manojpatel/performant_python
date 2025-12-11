@@ -36,7 +36,7 @@ docker-compose up -d
 docker-compose logs -f performant-python-app
 
 # Run tests
-cd test_suite && ./test_cache.sh
+cd test_suite && ./test_valkey_cache.sh
 ```
 
 **Service URLs:**
@@ -60,7 +60,7 @@ performant_python/
 │   ├── extras.py          # Search & templating
 │   └── telemetry.py       # OpenTelemetry tracing
 ├── test_suite/            # All tests & benchmarks
-│   ├── test_cache.sh      # Valkey cache validation
+│   ├── test_valkey_cache.sh # Valkey cache validation
 │   ├── test_decorator.sh  # Caching pattern comparison
 │   ├── benchmark.py       # HTTP benchmarking
 │   └── profile_app.sh     # Performance profiling
@@ -117,7 +117,7 @@ All test scripts in `test_suite/`:
 cd test_suite
 
 # Test Valkey cache (hit/miss scenarios)
-./test_cache.sh
+./test_valkey_cache.sh
 
 # Compare manual vs decorator caching
 ./test_decorator.sh

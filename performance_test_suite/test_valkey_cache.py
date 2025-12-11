@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for Redis cache demonstration.
+Test script for Valkey cache demonstration.
 Tests cache HIT and MISS scenarios with timing measurements.
 """
 import httpx
@@ -39,7 +39,7 @@ async def test_cache_miss():
     
     async with httpx.AsyncClient(timeout=30.0) as client:
         start = time.perf_counter()
-        response = await client.post(f"{BASE_URL}/duckdb-cached", json=payload)
+        response = await client.get(f"{BASE_URL}/samples/duckdb-cached?batch_id={payload['batch_id']}&size={len(payload['data'])}")
         elapsed = (time.perf_counter() - start) * 1000
         
         if response.status_code == 200:
@@ -70,7 +70,7 @@ async def test_cache_hit():
     
     async with httpx.AsyncClient(timeout=30.0) as client:
         start = time.perf_counter()
-        response = await client.post(f"{BASE_URL}/duckdb-cached", json=payload)
+        response = await client.get(f"{BASE_URL}/samples/duckdb-cached?batch_id={payload['batch_id']}&size={len(payload['data'])}")
         elapsed = (time.perf_counter() - start) * 1000
         
         if response.status_code == 200:
@@ -85,7 +85,7 @@ async def test_cache_hit():
             
             # Highlight the speedup
             if result.get('cache_hit'):
-                print(f"\n   🚀 CACHE HIT! Data served from Redis")
+                print(f"\n   🚀 CACHE HIT! Data served from Valkey")
                 print(f"   ⚡ Response time should be sub-millisecond from cache")
             
             return True
@@ -105,7 +105,7 @@ async def test_different_batch():
     
     async with httpx.AsyncClient(timeout=30.0) as client:
         start = time.perf_counter()
-        response = await client.post(f"{BASE_URL}/duckdb-cached", json=payload)
+        response = await client.get(f"{BASE_URL}/samples/duckdb-cached?batch_id={payload['batch_id']}&size={len(payload['data'])}")
         elapsed = (time.perf_counter() - start) * 1000
         
         if response.status_code == 200:
@@ -123,8 +123,8 @@ async def test_different_batch():
 
 
 async def main():
-    print("\n🧪 Redis Cache Testing Suite")
-    print("📌 Testing Redis LRU Cache → DuckDB Fallback Pattern\n")
+    print("\n🧪 Valkey Cache Testing Suite")
+    print("📌 Testing Valkey LRU Cache → DuckDB Fallback Pattern\n")
     
     # Wait for server to be ready
     print("⏳ Waiting for server to be ready...")
@@ -155,7 +155,7 @@ async def main():
             print("✅ All tests passed!")
             print("\n💡 Key Observations:")
             print("   - First request (MISS): ~10-50ms (DuckDB processing)")
-            print("   - Second request (HIT): <5ms (Redis cache)")
+            print("   - Second request (HIT): <5ms (Valkey cache)")
             print("   - Cache provides 10-100x speedup for hot data")
         else:
             print("❌ Some tests failed. Check the output above.")
