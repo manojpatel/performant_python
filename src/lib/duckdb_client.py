@@ -60,19 +60,24 @@ class DuckDBConnectionPool:
                 break
 
 
-# Global pool instance (initialized in main.py)
-_pool: Optional[DuckDBConnectionPool] = None
+# Global DuckDB connection pool instance
+_duckdb_pool: Optional[DuckDBConnectionPool] = None
 
 
 def get_pool() -> DuckDBConnectionPool:
-    """Get the global connection pool instance."""
-    if _pool is None:
-        raise RuntimeError("Connection pool not initialized. Call init_pool() first.")
-    return _pool
+    """
+    Get the global DuckDB connection pool instance.
+    Raises RuntimeError if not initialized.
+    """
+    if _duckdb_pool is None:
+        raise RuntimeError("DuckDB pool not initialized. Call init_pool() first.")
+    return _duckdb_pool
 
 
 def init_pool(database: str = ":memory:", pool_size: int = 4) -> DuckDBConnectionPool:
-    """Initialize the global connection pool."""
-    global _pool
-    _pool = DuckDBConnectionPool(database, pool_size)
-    return _pool
+    """
+    Initialize the global DuckDB connection pool.
+    """
+    global _duckdb_pool
+    _duckdb_pool = DuckDBConnectionPool(database, pool_size)
+    return _duckdb_pool

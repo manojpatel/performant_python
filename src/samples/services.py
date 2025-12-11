@@ -1,7 +1,7 @@
 import polars as pl
 import asyncio
 from typing import List, Dict, Any
-from src.models import ProcessingStats
+from src.samples.pydantic_models import ProcessingStats
 from opentelemetry import trace
 
 tracer = trace.get_tracer("performant-python.services")
@@ -60,7 +60,7 @@ async def process_data_batch(batch_id: str, raw_data: List[Dict[str, Any]]) -> P
 
 def _process_with_duckdb_sync(batch_id: str, raw_data: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Synchronous DuckDB processing logic."""
-    from src.database import get_pool
+    from src.lib.duckdb_client import get_pool
     
     if not raw_data:
         return {"error": "No data provided"}
@@ -148,7 +148,7 @@ async def get_batch_stats_cached(batch_id: str, raw_data: List[Dict[str, Any]]) 
             - total_time_ms: Total request time
             - source: "redis" or "duckdb"
     """
-    from src.redis_cache import get_cache
+    from src.lib.valkey_cache import get_cache
     import time
     
     t_start = time.perf_counter()
@@ -193,7 +193,7 @@ async def get_batch_stats_cached(batch_id: str, raw_data: List[Dict[str, Any]]) 
 
 
 # ============================================================================
-# DECORATOR VERSION: Using @redis_cache decorator (simpler, less manual code)
+# DECORATOR VERSION: Using @valkey_cache decorator (simpler, less manual code)
 # ============================================================================
 
 @tracer.start_as_current_span("get_batch_stats_decorator")
@@ -212,12 +212,12 @@ def _fetch_batch_stats_from_duckdb(batch_id: str, raw_data: List[Dict[str, Any]]
 
 
 # Apply the decorator with 5-minute TTL and custom key prefix
-from src.redis_cache import redis_cache
+from src.lib.valkey_cache import valkey_cache
 
-@redis_cache(ttl=300, key_prefix="batch_decorator")
+@valkey_cache(ttl=300, key_prefix="batch_decorator")
 async def get_batch_stats_with_decorator(batch_id: str, raw_data: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Same functionality as get_batch_stats_cached, but using the @redis_cache decorator.
+    Same functionality as get_batch_stats_cached, but using the @valkey_cache decorator.
     
     This demonstrates the decorator pattern:
     - Much cleaner code (no manual cache logic)

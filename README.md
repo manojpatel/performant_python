@@ -10,8 +10,8 @@ A production-ready, ultra-high-performance Python backend stack leveraging Rust/
 - **Event Loop**: [uvloop 0.21+](https://github.com/MagicStack/uvloop) - Ultra-fast asyncio (C/libuv)
 
 ### Data & Processing
-- **Caching**: [Redis 5.2](https://redis.io/) - In-memory LRU cache (C)
-- **DataFrames**: [Polars 1.36+](https://pola.rs/) - Lightning-fast dataframes (Rust)
+- **Caching**: [Valkey 8.0](https://valkey.io/) - High-performance Redis fork (C)
+- **DataFrames**: [Polars 1.17+](https://pola.rs/) - Lightning-fast dataframes (Rust)
 - **SQL/OLAP**: [DuckDB 1.1.3](https://duckdb.org/) - Analytics SQL engine (C++)
 - **Arrays**: [NumPy 2.2](https://numpy.org/) - Numerical computing
 
@@ -20,14 +20,16 @@ A production-ready, ultra-high-performance Python backend stack leveraging Rust/
 - **Ultra-fast**: [msgspec 0.18](https://github.com/jcrist/msgspec) - C/Cython validation
 - **JSON**: [orjson 3.10](https://github.com/ijl/orjson) - Fastest JSON library (Rust)
 
-### Search & Rendering
+### Search, Rendering & Performance
 - **Search**: [Tantivy 0.22](https://github.com/quickwit-oss/tantivy-py) - Full-text search (Rust)
 - **Templates**: [MiniJinja 2.4](https://github.com/mitsuhiko/minijinja) - Fast templates (Rust)
+- **Compression**: [zstandard 0.23](https://github.com/indygreg/python-zstandard) - Fast HTTP compression
+- **Hashing**: [xxhash 3.5](https://github.com/ifduyue/python-xxhash) - Ultra-fast cache keys
 
 ## 🚀 Quick Start
 
 ```bash
-# Start all services (app + Redis + observability)
+# Start all services (app + Valkey + observability)
 docker-compose up -d
 
 # View logs
@@ -41,6 +43,7 @@ cd test_suite && ./test_cache.sh
 - **Application**: http://localhost:8080
 - **Jaeger UI**: http://localhost:16686 (distributed tracing)
 - **OpenSearch**: http://localhost:9200 (trace storage)
+- **Valkey**: localhost:6379 (cache)
 
 ## 📂 Project Structure
 
@@ -49,14 +52,15 @@ performant_python/
 ├── src/                    # Application code
 │   ├── main.py            # FastAPI app & endpoints
 │   ├── services.py        # Business logic (Polars, DuckDB)
-│   ├── redis_cache.py     # Redis caching decorator
+│   ├── valkey_cache.py    # Valkey caching decorator (xxhash keys)
+│   ├── compression.py     # Zstandard compression middleware
 │   ├── database.py        # DuckDB connection pool
 │   ├── models.py          # Pydantic models
 │   ├── fast_models.py     # msgspec models (faster)
 │   ├── extras.py          # Search & templating
 │   └── telemetry.py       # OpenTelemetry tracing
 ├── test_suite/            # All tests & benchmarks
-│   ├── test_cache.sh      # Redis cache validation
+│   ├── test_cache.sh      # Valkey cache validation
 │   ├── test_decorator.sh  # Caching pattern comparison
 │   ├── benchmark.py       # HTTP benchmarking
 │   └── profile_app.sh     # Performance profiling
@@ -69,8 +73,8 @@ performant_python/
 ## 🌐 API Endpoints
 
 ### Caching Demonstrations
-- **`POST /duckdb-cached`** - Redis LRU cache with detailed timing metrics
-- **`POST /duckdb-cached-decorator`** - Same using `@redis_cache` decorator
+- **`POST /duckdb-cached`** - Valkey LRU cache with detailed timing metrics
+- **`POST /duckdb-cached-decorator`** - Same using `@valkey_cache` decorator
 
 ### Data Processing
 - **`POST /process`** - Pydantic validation + Polars DataFrames
@@ -86,16 +90,17 @@ performant_python/
 ## 📊 Performance
 
 **Key Results:**
-- 🚀 **1,096x faster** with Redis cache (2.5s → 2.3ms)
-- ⚡ **90% of Node.js speed** for web requests (58K vs 65K req/s)
+- 🚀 **250x faster** with Valkey cache (517ms → 2.1ms)
+- ⚡ **10x faster hashing** with xxhash vs SHA256
+- 📦 **20-30% better compression** with zstandard vs gzip
 - 🤖 **100:1 AI/ML advantage** over Node.js ecosystem
 
-**Why This Stack?**
+**Benchmark Results (Dec 2024):**
 ```
-Traditional Python (Flask):    8.5K req/s
-This Stack (Granian+Rust):    58K req/s  ← 7x faster
-Node.js (Fastify):            65K req/s
-Rust (Actix):                180K req/s
+50,000 records processed:     294ms total (50ms Polars)
+10,000 records processed:      90ms total (39ms Polars)
+ Search 10k documents:         4.4ms
+ Cache hit response:           2.1ms
 ```
 
 **📈 See [PERFORMANCE_COMPARISON.md](PERFORMANCE_COMPARISON.md) for:**
@@ -111,7 +116,7 @@ All test scripts in `test_suite/`:
 ```bash
 cd test_suite
 
-# Test Redis cache (hit/miss scenarios)
+# Test Valkey cache (hit/miss scenarios)
 ./test_cache.sh
 
 # Compare manual vs decorator caching
@@ -126,13 +131,13 @@ python benchmark.py
 
 ## 🎯 Key Features
 
-### 1. Redis LRU Caching
+### 1. Valkey LRU Caching with xxhash
 ```python
-from src.redis_cache import redis_cache
+from src.valkey_cache import valkey_cache
 
-@redis_cache(ttl=300, key_prefix="user_data")
+@valkey_cache(ttl=300, key_prefix="user_data")
 async def get_user_data(user_id: int):
-    """Automatically cached for 5 minutes"""
+    """Automatically cached for 5 minutes with xxhash keys"""
     return await fetch_from_db(user_id)
 ```
 
@@ -197,7 +202,7 @@ All endpoints automatically instrumented with OpenTelemetry.
 ENABLE_TRACING=true                           # Toggle tracing
 OTEL_SERVICE_NAME=performant-python          # Service name
 OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317  # Trace endpoint
-REDIS_URL=redis://redis:6379                 # Redis connection
+VALKEY_URL=valkey://valkey:6379              # Valkey connection
 ```
 
 ### Scaling
@@ -207,17 +212,19 @@ granian --workers 4 --loop uvloop src.main:app
 ```
 
 ### Production Checklist
-- [ ] Configure Redis persistence (RDB/AOF)
-- [ ] Set up Redis Sentinel for HA
+- [ ] Configure Valkey persistence (RDB/AOF)
+- [ ] Set up Valkey Sentinel/Cluster for HA
 - [ ] Monitor cache hit ratios
 - [ ] Scale workers based on CPU cores
 - [ ] Implement cache warming
+- [ ] Tune zstandard compression level
 - [ ] Set up proper logging aggregation
 
 ## 📝 Code Highlights
 
-- **`src/main.py`**: FastAPI app with uvloop, Redis initialization, all endpoints
-- **`src/redis_cache.py`**: Generic `@redis_cache` decorator for any async function
+- **`src/main.py`**: FastAPI app with uvloop, Valkey initialization, zstd compression
+- **`src/valkey_cache.py`**: Generic `@valkey_cache` decorator with xxhash keys
+- **`src/compression.py`**: Zstandard HTTP compression middleware
 - **`src/services.py`**: Polars & DuckDB processing with caching patterns
 - **`src/database.py`**: Thread-safe DuckDB connection pooling
 - **`src/extras.py`**: Tantivy search & MiniJinja templating
@@ -240,7 +247,8 @@ granian --interface asgi --reload src.main:app
 
 ### Library Versions
 All libraries are latest stable versions (December 2024):
-- Polars 1.36, DuckDB 1.1.3, NumPy 2.2, Redis 5.2
+- Polars 1.17, DuckDB 1.1.3, NumPy 2.2, Valkey 6.0
+- zstandard 0.23, xxhash 3.5, orjson 3.10
 - See `requirements.txt` for complete list
 
 ## 🎓 Learn More

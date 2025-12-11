@@ -15,7 +15,14 @@ orjson>=3.10.0          # Latest stable
 msgspec>=0.18.6         # Latest stable
 
 # Caching
-redis>=5.2.0            # Latest stable for Python
+valkey>=6.0.2           # Valkey client (Redis fork, better performance)
+
+# Database Drivers
+asyncpg>=0.31.0         # Fastest async PostgreSQL driver
+
+# Compression & Hashing
+zstandard>=0.23.0       # Fast compression with good ratios
+xxhash>=3.5.0           # Ultra-fast non-cryptographic hashing
 
 # Rust-powered Tools
 minijinja>=2.4.0        # Latest stable

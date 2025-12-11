@@ -1,32 +1,35 @@
 """
-Redis cache module with generic decorator for LRU caching.
+Valkey cache module with generic decorator for LRU caching.
 Provides timing instrumentation and automatic fallback on cache miss.
+
+Valkey is a high-performance Redis fork with improved performance and features.
+Using xxhash for fast non-cryptographic cache key hashing.
 """
 import os
 import time
 import asyncio
-import hashlib
 import json
 from typing import Any, Callable, Optional
 from functools import wraps
 
-import redis.asyncio as redis
+import valkey.asyncio as valkey
+import xxhash
 import orjson
 from opentelemetry import trace
 
-tracer = trace.get_tracer("performant-python.redis-cache")
+tracer = trace.get_tracer("performant-python.valkey-cache")
 
 
-class RedisCache:
-    """Redis connection pool and cache management."""
+class ValkeyCache:
+    """Valkey connection pool and cache management."""
     
-    def __init__(self, url: str = "redis://localhost:6379"):
+    def __init__(self, url: str = "valkey://localhost:6379"):
         self.url = url
-        self._pool: Optional[redis.Redis] = None
+        self._pool: Optional[valkey.Valkey] = None
     
     async def init_pool(self):
-        """Initialize Redis connection pool."""
-        self._pool = redis.Redis.from_url(
+        """Initialize Valkey connection pool."""
+        self._pool = valkey.Valkey.from_url(
             self.url,
             encoding="utf-8",
             decode_responses=False,  # We'll handle binary data with orjson
@@ -37,12 +40,12 @@ class RedisCache:
         # Test connection
         try:
             await self._pool.ping()
-            print(f"✅ Redis connected at {self.url}")
+            print(f"✅ Valkey connected at {self.url}")
         except Exception as e:
-            print(f"⚠️  Redis connection failed: {e}. Cache will be disabled.")
+            print(f"⚠️  Valkey connection failed: {e}. Cache will be disabled.")
     
     async def close(self):
-        """Close Redis connection pool."""
+        """Close Valkey connection pool."""
         if self._pool:
             await self._pool.close()
     
@@ -52,13 +55,13 @@ class RedisCache:
             return None
         
         try:
-            with tracer.start_as_current_span("redis_get"):
+            with tracer.start_as_current_span("valkey_get"):
                 data = await self._pool.get(key)
                 if data:
                     return orjson.loads(data)
                 return None
         except Exception as e:
-            print(f"Redis GET error for key {key}: {e}")
+            print(f"Valkey GET error for key {key}: {e}")
             return None
     
     async def set(self, key: str, value: Any, ttl: int = 300):
@@ -67,11 +70,11 @@ class RedisCache:
             return
         
         try:
-            with tracer.start_as_current_span("redis_set"):
+            with tracer.start_as_current_span("valkey_set"):
                 serialized = orjson.dumps(value)
                 await self._pool.setex(key, ttl, serialized)
         except Exception as e:
-            print(f"Redis SET error for key {key}: {e}")
+            print(f"Valkey SET error for key {key}: {e}")
     
     async def delete(self, key: str):
         """Delete key from cache."""
@@ -81,27 +84,27 @@ class RedisCache:
         try:
             await self._pool.delete(key)
         except Exception as e:
-            print(f"Redis DELETE error for key {key}: {e}")
+            print(f"Valkey DELETE error for key {key}: {e}")
 
 
 # Global cache instance
-_cache: Optional[RedisCache] = None
+_cache: Optional[ValkeyCache] = None
 
 
-def get_cache() -> RedisCache:
-    """Get the global Redis cache instance."""
+def get_cache() -> ValkeyCache:
+    """Get the global Valkey cache instance."""
     if _cache is None:
-        raise RuntimeError("Redis cache not initialized. Call init_cache() first.")
+        raise RuntimeError("Valkey cache not initialized. Call init_cache() first.")
     return _cache
 
 
-async def init_cache(url: Optional[str] = None) -> RedisCache:
-    """Initialize the global Redis cache."""
+async def init_cache(url: Optional[str] = None) -> ValkeyCache:
+    """Initialize the global Valkey cache."""
     global _cache
     if url is None:
-        url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        url = os.getenv("VALKEY_URL", "valkey://localhost:6379")
     
-    _cache = RedisCache(url)
+    _cache = ValkeyCache(url)
     await _cache.init_pool()
     return _cache
 
@@ -109,6 +112,7 @@ async def init_cache(url: Optional[str] = None) -> RedisCache:
 def generate_cache_key(prefix: str, *args, **kwargs) -> str:
     """
     Generate a deterministic cache key from function arguments.
+    Uses xxhash for ultra-fast non-cryptographic hashing.
     
     Args:
         prefix: Key prefix (typically function name)
@@ -116,7 +120,7 @@ def generate_cache_key(prefix: str, *args, **kwargs) -> str:
         **kwargs: Keyword arguments
     
     Returns:
-        SHA256 hash-based cache key
+        xxhash-based cache key (10x faster than SHA256)
     """
     # Create a deterministic string representation
     key_data = {
@@ -124,27 +128,28 @@ def generate_cache_key(prefix: str, *args, **kwargs) -> str:
         "kwargs": sorted(kwargs.items())  # Sort for determinism
     }
     key_string = json.dumps(key_data, sort_keys=True, default=str)
-    key_hash = hashlib.sha256(key_string.encode()).hexdigest()[:16]
+    # Use xxhash64 for speed (non-cryptographic but perfect for cache keys)
+    key_hash = xxhash.xxh64(key_string.encode()).hexdigest()[:16]
     
     return f"{prefix}:{key_hash}"
 
 
-def redis_cache(ttl: int = 300, key_prefix: Optional[str] = None):
+def valkey_cache(ttl: int = 300, key_prefix: Optional[str] = None):
     """
-    Generic Redis cache decorator with timing instrumentation.
+    Generic Valkey cache decorator with timing instrumentation.
     
     Usage:
-        @redis_cache(ttl=300, key_prefix="batch_stats")
+        @valkey_cache(ttl=300, key_prefix="batch_stats")
         async def expensive_function(batch_id: str, data: list):
             # ... expensive computation
             return result
     
     The decorator will:
-    1. Generate a cache key from function name + arguments
-    2. Check Redis for cached result (timed)
+    1. Generate a cache key from function name + arguments (using xxhash)
+    2. Check Valkey for cached result (timed)
     3. Return cached result if found (cache hit)
     4. Call the wrapped function if not found (cache miss)
-    5. Store the result in Redis with TTL
+    5. Store the result in Valkey with TTL
     6. Return result with cache metadata
     
     Args:
@@ -156,7 +161,7 @@ def redis_cache(ttl: int = 300, key_prefix: Optional[str] = None):
             - data: The actual result
             - cache_hit: Boolean indicating cache hit/miss
             - cache_time_ms: Time spent checking cache
-            - source: "redis" or function source
+            - source: "valkey" or function source
     """
     def decorator(func: Callable):
         @wraps(func)
@@ -178,7 +183,7 @@ def redis_cache(ttl: int = 300, key_prefix: Optional[str] = None):
                     "data": cached_result,
                     "cache_hit": True,
                     "cache_time_ms": cache_time,
-                    "source": "redis"
+                    "source": "valkey"
                 }
             
             # Cache miss - call the wrapped function

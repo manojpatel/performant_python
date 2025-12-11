@@ -1,0 +1,60 @@
+# Git
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments (not needed in container)
+.venv/
+venv/
+ENV/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation (not needed in runtime)
+*.md
+!requirements.txt
+
+# Test files (optional - comment out if tests run in container)
+test_suite/
+tests/
+
+# Logs (generated at runtime)
+*.log
+logs/
+
+# Artifacts
+.gemini/
+
+# Data files (mount as volumes instead)
+*.parquet
+*.csv
+*.db
+*.duckdb
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# macOS
+.DS_Store
