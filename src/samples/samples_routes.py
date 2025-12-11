@@ -70,7 +70,7 @@ async def batch_processing(batch: BatchData) -> ProcessingStats:
     Process data batch with Polars + DuckDB.
     Demonstrates: Polars DataFrames, DuckDB in-memory analytics
     """
-    return await process_data_batch(batch.data)
+    return await process_data_batch(batch.batch_id, batch.data)
 
 
 @router.post("/batch-msgspec")
@@ -124,7 +124,7 @@ async def benchmark_endpoint(size: int):
     Demonstrates: ORJSON serialization performance
     """
     t0 = time.perf_counter()
-    data = generate_large_dataset(size)
+    data = await generate_large_dataset(size)
     t1 = time.perf_counter()
     return {
         "size": size,
@@ -140,7 +140,7 @@ async def large_json_response():
     Generate large JSON response to test serialization.
     Demonstrates: ORJSON performance with large payloads
     """
-    data = generate_large_dataset(10000)
+    data = await generate_large_dataset(10000)
     return {"count": len(data), "data": data}
 
 
