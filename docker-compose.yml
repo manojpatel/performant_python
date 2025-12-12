@@ -17,6 +17,8 @@ services:
       - jaeger
       - valkey
       - postgres
+    volumes:
+      - ./src:/app/src
     restart: on-failure
 
   valkey:

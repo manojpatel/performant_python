@@ -44,11 +44,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "Temporarily disabling uvloop..."
 echo ""
 
-# Comment out uvloop in main.py
-sed -i.bak '13,20s/^/# /' src/main.py
-
-# Restart container
-docker compose restart performant-python-app > /dev/null 2>&1
+# Restart container with asyncio loop
+LOOP_IMPLEMENTATION=asyncio docker compose up -d performant-python-app
 sleep 5
 
 echo "Running benchmark without uvloop..."
@@ -56,8 +53,7 @@ hey -z ${DURATION}s -c $CONCURRENCY $ENDPOINT > /tmp/bench_without_uvloop.txt
 cat /tmp/bench_without_uvloop.txt
 
 # Restore uvloop
-mv src/main.py.bak src/main.py
-docker compose restart performant-python-app > /dev/null 2>&1
+LOOP_IMPLEMENTATION=uvloop docker compose up -d performant-python-app
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

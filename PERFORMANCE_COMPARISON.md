@@ -191,7 +191,7 @@ COPY (SELECT * FROM user_events) TO 'events.parquet';
 | Component | Language | Speedup vs Pure Python |
 |-----------|----------|------------------------|
 | **Granian** (HTTP Server) | Rust | **10-15x** |
-| **uvloop** (Event Loop) | C (libuv) | **2-4x** |
+| **uvloop** (Event Loop) | C (libuv) | **1-2x** (Parity on Py3.11+) |
 | **Polars** (DataFrames) | Rust | **10-100x** |
 | **DuckDB** (OLAP DB) | C++ | **50-200x** |
 | **Valkey** (Cache) | C | **∞** (sub-ms) |
@@ -203,6 +203,8 @@ COPY (SELECT * FROM user_events) TO 'events.parquet';
 | **asyncpg** (PostgreSQL) | C/Cython | **2-3x vs psycopg** |
 
 **Result:** Python becomes a thin orchestration layer over **highly optimized libraries**.
+
+> **Note on uvloop:** While `uvloop` historically provided 2-4x speedups, **Python 3.11+** has significantly optimized the standard `asyncio` loop, resulting in near-parity for many standard web workloads. We keep `uvloop` for its robustness in high-concurrency network polling scenarios.
 
 ---
 
