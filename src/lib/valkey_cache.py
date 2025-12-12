@@ -88,25 +88,25 @@ class ValkeyCache:
 
 
 # Global cache instance
-_cache: Optional[ValkeyCache] = None
+_valkey_cache: Optional[ValkeyCache] = None
 
 
-def get_cache() -> ValkeyCache:
+def get_valkey_cache() -> ValkeyCache:
     """Get the global Valkey cache instance."""
-    if _cache is None:
-        raise RuntimeError("Valkey cache not initialized. Call init_cache() first.")
-    return _cache
+    if _valkey_cache is None:
+        raise RuntimeError("Valkey cache not initialized. Call init_valkey_cache() first.")
+    return _valkey_cache
 
 
-async def init_cache(url: Optional[str] = None) -> ValkeyCache:
+async def init_valkey_cache(url: Optional[str] = None) -> ValkeyCache:
     """Initialize the global Valkey cache."""
-    global _cache
+    global _valkey_cache
     if url is None:
         url = os.getenv("VALKEY_URL", "valkey://localhost:6379")
     
-    _cache = ValkeyCache(url)
-    await _cache.init_pool()
-    return _cache
+    _valkey_cache = ValkeyCache(url)
+    await _valkey_cache.init_pool()
+    return _valkey_cache
 
 
 def generate_cache_key(prefix: str, *args, **kwargs) -> str:

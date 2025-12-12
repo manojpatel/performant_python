@@ -13,8 +13,8 @@ async def lifespan(app: FastAPI):
     print("🚀 application starting up...")
     
     # Initialize Valkey cache
-    from src.lib.valkey_cache import init_cache
-    await init_cache()
+    from src.lib.valkey_cache import init_valkey_cache
+    await init_valkey_cache()
     print("🟣 Valkey cache initialized")
     
     # Initialize DuckDB connection pool

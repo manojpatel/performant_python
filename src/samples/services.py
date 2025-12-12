@@ -148,16 +148,16 @@ async def get_batch_stats_cached(batch_id: str, raw_data: List[Dict[str, Any]]) 
             - total_time_ms: Total request time
             - source: "redis" or "duckdb"
     """
-    from src.lib.valkey_cache import get_cache
+    from src.lib.valkey_cache import get_valkey_cache
     import time
     
     t_start = time.perf_counter()
-    cache = get_cache()
+    valkey_cache = get_valkey_cache()
     cache_key = f"batch:{batch_id}"
     
     # Try to get from cache
     t_cache_start = time.perf_counter()
-    cached_result = await cache.get(cache_key)
+    cached_result = await valkey_cache.get(cache_key)
     cache_time_ms = (time.perf_counter() - t_cache_start) * 1000
     
     if cached_result is not None:
@@ -178,7 +178,7 @@ async def get_batch_stats_cached(batch_id: str, raw_data: List[Dict[str, Any]]) 
     processing_time_ms = (time.perf_counter() - t_process_start) * 1000
     
     # Store in cache (TTL: 5 minutes)
-    await cache.set(cache_key, stats, ttl=300)
+    await valkey_cache.set(cache_key, stats, ttl=300)
     
     total_time_ms = (time.perf_counter() - t_start) * 1000
     
