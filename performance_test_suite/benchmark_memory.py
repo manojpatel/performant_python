@@ -3,7 +3,13 @@ Memory profiling benchmark for different validation approaches.
 """
 import tracemalloc
 import asyncio
-from src.lib.postgres_client import get_postgres
+import sys
+import os
+
+# Add src to path
+sys.path.append(os.getcwd())
+
+from src.lib.postgres_client import get_postgres, init_postgres
 from src.samples.pydantic_models import UserEventResponse
 from src.samples.msgspec_models import UserEventResponseMsg
 import json
@@ -94,6 +100,9 @@ async def main():
     print("MEMORY USAGE BENCHMARKS (100 records)")
     print("=" * 70)
     
+    # Initialize DB
+    await init_postgres()
+    
     # Run each test 3 times and average
     pydantic_results = []
     msgspec_results = []
@@ -134,6 +143,9 @@ async def main():
     print(f"  Pydantic:         {pydantic_avg:.2f} KB")
     print(f"  msgspec:          {msgspec_avg:.2f} KB ({((pydantic_avg - msgspec_avg) / pydantic_avg * 100):.0f}% less)")
     print(f"  msgspec+Polars:   {polars_avg:.2f} KB")
+    
+    # Close DB
+    await get_postgres().close()
 
 if __name__ == "__main__":
     asyncio.run(main())

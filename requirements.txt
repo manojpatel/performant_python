@@ -41,3 +41,6 @@ colorama>=0.4.6            # Colored console output for development
 # HTTP Client
 httpx>=0.27.0               # Modern async HTTP client
 
+# System Utilities
+psutil>=5.9.0               # Process utilities for benchmarking
+

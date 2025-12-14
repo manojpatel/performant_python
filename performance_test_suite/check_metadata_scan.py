@@ -32,14 +32,13 @@ async def main():
             print(f"Result: {count} rows")
             print(f"Duration: {duration:.2f}ms")
             
-            # Also get the file list it sees
-            print("\n--- Test 2: Inspecting Metadata Files ---")
+            # Also get the snapshots
+            print("\n--- Test 2: Inspecting Snapshots ---")
             t0 = time.perf_counter()
-            # iceberg_metadata function helps inspect
-            # But let's just query data first
-            res = conn.execute(f"SELECT file_path FROM iceberg_scan('{METADATA_FILE}', allow_moved_paths=true, mode='entries') LIMIT 5").fetchall()
+            # iceberg_snapshots returns snapshot metadata
+            res = conn.execute(f"SELECT * FROM iceberg_snapshots('{METADATA_FILE}') LIMIT 5").fetchall()
             for r in res:
-                print(f"File: {r[0]}")
+                print(f"Snapshot: {r}")
                 
         except Exception as e:
             print(f"Error: {e}")

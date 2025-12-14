@@ -1,6 +1,11 @@
 import asyncio
 import time
 import duckdb
+import sys
+import os
+
+# Add src to path
+sys.path.append(os.getcwd())
 from src.lib.duckdb_client import get_pool
 from src.lib.iceberg_utils import get_latest_metadata_file
 from src.samples.msgspec_models import IcebergBenchmarkResult

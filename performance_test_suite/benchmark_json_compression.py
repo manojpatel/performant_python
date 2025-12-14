@@ -6,6 +6,11 @@ import time
 import orjson
 import msgspec
 import zstandard as zstd
+import sys
+import os
+
+# Add src to path
+sys.path.append(os.getcwd())
 from src.samples.pydantic_models import UserEventResponse
 from src.samples.msgspec_models import UserEventResponseMsg
 
