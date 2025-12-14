@@ -1,21 +1,28 @@
+
 import asyncio
-import sys
 import os
+import sys
 import time
+from pathlib import Path
 
 # Add src to path
-sys.path.append(os.getcwd())
+sys.path.append(str(Path.cwd()))
 
-from src.lib.duckdb_client import init_pool, get_pool
+from src.lib.duckdb_client import get_pool, init_pool
 
-EXPERIMENT_FILE_KEY = "dumped-clustred-data/source_data_iceberg/data/ARDV=2026-05-31T00%3A00Z/CR_TY_CD=XXAR/SHOP_CAR_TYPE_CD=XXAR/POS_CD=UK/00015-27-4c50d32e-0192-46d9-82b8-e3573dc8b12d-01394.parquet"
+PARQUET_FILE = (
+        "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data/ARDV=2025-05-31/"
+        "CRID=000000000000000000000000000000000015/SS_ID=00000000000000000000000000000000/load_timestamp=2024-11-20T00%3A00%3A00Z/"
+        "CR_TY_CD=XXAR/SHOP_CAR_TYPE_CD=XXAR/POS_CD=UK/00015-27-4c50d32e-0192-46d9-82b8-e3573dc8b12d-01394.parquet"
+    )
 BUCKET = "liquid-crystal-bucket-manoj"
-S3_URI = f"s3://{BUCKET}/{EXPERIMENT_FILE_KEY}"
+S3_URI = PARQUET_FILE
+
 
 async def main():
-    print(f"Benchmarking Direct Parquet Performance...")
+    print("Benchmarking Direct Parquet Performance...")
     print(f"Target: {S3_URI}")
-    
+
     # Init pool
     init_pool()
     pool = get_pool()
@@ -25,12 +32,12 @@ async def main():
         t0 = time.perf_counter()
         res = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{S3_URI}')").fetchall()
         t1 = time.perf_counter()
-        
+
         count = res[0][0]
         duration = (t1 - t0) * 1000
         print(f"Result: {count} rows")
         print(f"Duration: {duration:.2f}ms")
-        
+
         print("\n--- Test 2: Select Top 5 Rows ---")
         t0 = time.perf_counter()
         print("\n--- Test 2: Select Specific Column (POS_CD) ---")
@@ -54,6 +61,7 @@ async def main():
         duration = (t1 - t0) * 1000
         print(f"Result: {res[0][0]} rows")
         print(f"Duration: {duration:.2f}ms")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

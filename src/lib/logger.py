@@ -8,13 +8,14 @@ Provides:
 - Performance-optimized processors
 - Stack trace capture for errors
 """
-import sys
+
 import logging
+import sys
+
 import structlog
+from opentelemetry import trace
 from structlog.types import EventDict, WrappedLogger
-from typing import Any
-from opentelemetry import trace
-from opentelemetry import trace
+
 from src.middleware.log_correlation import get_request_id
 
 
@@ -29,13 +30,10 @@ def add_open_telemetry_spans(
         event_dict["span_id"] = format(ctx.span_id, "016x")
     return event_dict
 
-
     return event_dict
 
 
-def add_request_id(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_request_id(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Add request_id to log records if available in context."""
     req_id = get_request_id()
     if req_id:
@@ -50,20 +48,14 @@ def emit_opentelemetry_event(
     span = trace.get_current_span()
     if span and span.is_recording():
         # Clean attributes (exclude timestamp/event which are redundant)
-        attributes = {k: str(v) for k, v in event_dict.items() 
-                     if k not in ("event", "timestamp")}
+        attributes = {k: str(v) for k, v in event_dict.items() if k not in ("event", "timestamp")}
         attributes["level"] = method_name
-        
-        span.add_event(
-            name=event_dict.get("event", "log"),
-            attributes=attributes
-        )
+
+        span.add_event(name=event_dict.get("event", "log"), attributes=attributes)
     return event_dict
 
 
-def add_app_context(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def add_app_context(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Add application-level context to all logs."""
     event_dict["app"] = "performant-python"
     return event_dict
@@ -72,7 +64,7 @@ def add_app_context(
 def configure_structlog(json_logs: bool = None) -> None:
     """
     Configure structlog for the application.
-    
+
     Args:
         json_logs: If True, output JSON. If False, colored console.
                    If None, auto-detect (JSON if not a TTY, colored if TTY)
@@ -80,14 +72,14 @@ def configure_structlog(json_logs: bool = None) -> None:
     # Auto-detect if not specified
     if json_logs is None:
         json_logs = not sys.stderr.isatty()
-    
+
     # Configure standard logging to work with structlog
     logging.basicConfig(
         format="%(message)s",
         level=logging.INFO,
         stream=sys.stdout,
     )
-    
+
     # Common processors for all configurations
     processors = [
         # Add log level
@@ -108,23 +100,27 @@ def configure_structlog(json_logs: bool = None) -> None:
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]
-    
+
     if json_logs:
         # Production: JSON output
-        processors.extend([
-            # Render as JSON
-            structlog.processors.JSONRenderer(sort_keys=True)
-        ])
+        processors.extend(
+            [
+                # Render as JSON
+                structlog.processors.JSONRenderer(sort_keys=True)
+            ]
+        )
     else:
         # Development: Colored console output
-        processors.extend([
-            # Add colors
-            structlog.dev.ConsoleRenderer(
-                colors=True,
-                exception_formatter=structlog.dev.plain_traceback,
-            )
-        ])
-    
+        processors.extend(
+            [
+                # Add colors
+                structlog.dev.ConsoleRenderer(
+                    colors=True,
+                    exception_formatter=structlog.dev.plain_traceback,
+                )
+            ]
+        )
+
     structlog.configure(
         processors=processors,
         wrapper_class=structlog.stdlib.BoundLogger,
@@ -137,22 +133,22 @@ def configure_structlog(json_logs: bool = None) -> None:
 def get_logger(name: str = None) -> structlog.stdlib.BoundLogger:
     """
     Get a structured logger instance.
-    
+
     Args:
         name: Logger name (typically __name__ for the module)
-    
+
     Returns:
         Configured structlog logger
-        
+
     Usage:
         logger = get_logger(__name__)
         logger.info("cache_hit", key="user:123", latency_ms=2.1)
-        
+
         # Development output:
         [2024-12-14 17:14:02] cache_hit    key=user:123 latency_ms=2.1
-        
+
         # Production output (JSON):
-        {"event": "cache_hit", "key": "user:123", "latency_ms": 2.1, 
+        {"event": "cache_hit", "key": "user:123", "latency_ms": 2.1,
          "timestamp": "2024-12-14T11:44:02.123456Z", "level": "info"}
     """
     return structlog.get_logger(name)

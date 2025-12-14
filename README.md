@@ -31,13 +31,13 @@ A production-ready, ultra-high-performance Python backend stack leveraging Rust/
 
 ```bash
 # Start all services (app + Valkey + observability)
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f performant-python-app
+docker compose logs -f performant-python-app
 
-# Run tests
-cd performance_test_suite && ./test_valkey_cache.sh
+# Run benchmarks
+uv run performance_test_suite/benchmark.py
 ```
 
 **Service URLs:**
@@ -139,26 +139,83 @@ msgspec validation:            20x faster than Pydantic
 - AI/ML ecosystem comparison
 - Real-world use case recommendations
 
-## 🧪 Testing
+## 📘 Standard Operating Procedures (SOP)
 
-All test scripts in `performance_test_suite/`:
+### 1. Dependency Management (using `uv`)
+We use `uv` for fast, reproducible builds.
 
 ```bash
-cd performance_test_suite
+# Install dependencies
+uv sync
 
-# Test Valkey cache (hit/miss scenarios)
-./test_valkey_cache.sh
-# Or use Python version (requires: pip install httpx)
-python test_valkey_cache.py
+# Add a new package
+uv add pandas
 
-# Compare manual vs decorator caching
-./test_decorator.sh
+# Remove a package
+uv remove requests
 
-# Benchmark all endpoints
-python benchmark.py
+# Update all packages
+uv lock --upgrade
+```
 
-# Profile application
-./profile_app.sh
+### 2. Linting & Formatting
+We use `ruff` for all code quality checks.
+
+```bash
+# Format code
+uv run ruff format .
+
+# Check for errors (and auto-fix)
+uv run ruff check . --fix
+```
+
+### 3. Benchmarking
+Run the full performance suite:
+
+```bash
+# Run HTTP benchmarks
+uv run performance_test_suite/benchmark.py
+
+# Benchmark JSON compression
+uv run performance_test_suite/benchmark_json_compression.py
+```
+
+### 4. Code Quality & Security (New)
+Run these tools regularly to ensure high standards:
+
+```bash
+# Static Type Checking (finds bugs)
+uv run mypy .
+
+# Modernization idioms (refactoring suggestions)
+uv run refurb .
+
+# Security Audit (finds vulnerabilities)
+uv run bandit -r src/
+```
+
+### 5. Advanced Profiling
+Generate flame graphs or line-level CPU/Memory analysis.
+
+```bash
+# Line-level CPU/Memory profiling (Scalene)
+uv run scalene performance_test_suite/benchmark.py
+
+# Flamegraph profiling (py-spy)
+# Ensure container is running:
+docker compose up -d
+./performance_test_suite/profile_app.sh
+```
+
+### 5. Testing
+Run functional tests:
+
+```bash
+# Run pytest (finds all tests in tests/ and performance_test_suite/)
+uv run pytest
+
+# Run specific integration test
+uv run performance_test_suite/test_valkey_cache.py
 ```
 
 ## 🎯 Key Features
@@ -286,13 +343,13 @@ granian --workers 4 --loop uvloop src.main:app
 # Install uv (fast package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
+
 # Create venv and install deps
 uv venv
-source .venv/bin/activate
-uv pip install -r requirements.txt
+uv sync
 
 # Run server
-granian --interface asgi --reload src.main:app
+uv run granian --interface asgi --reload src.main:app
 ```
 
 ### Library Versions

@@ -2,14 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies if needed (e.g. for build tools)
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency definitions
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies
+# --frozen: strict lock file usage
+# --no-install-project: only dependencies, not the app itself (since we copy src later)
+RUN uv sync --frozen --no-install-project
+
+# Add venv to PATH
+ENV PATH="/app/.venv/bin:$PATH"
+
 RUN opentelemetry-bootstrap -a install
 
 # Copy application code

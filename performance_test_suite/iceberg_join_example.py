@@ -1,35 +1,41 @@
 import asyncio
-import sys
 import os
+import sys
 import time
+from pathlib import Path
 
 # Add src to path
-sys.path.append(os.getcwd())
+sys.path.append(str(Path.cwd()))
 
-from src.lib.duckdb_client import init_pool, get_pool
+from src.lib.duckdb_client import get_pool, init_pool
 from src.lib.iceberg_utils import get_latest_metadata_file
 from src.lib.valkey_cache import init_valkey_cache
+
 
 async def run_join_demo():
     print("Initializing resources...")
     init_pool()
     await init_valkey_cache()
-    
+
     # 1. Get the Iceberg Path
     # "Fact Table"
-    resolution = await get_latest_metadata_file("s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data_iceberg")
+    resolution = await get_latest_metadata_file(
+        "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data_iceberg"
+    )
     metadata_path = resolution["data"]
     print(f"Iceberg Source: {metadata_path}")
-    
+
     pool = get_pool()
-    
+
     # 2. Acquire Connection
     # EVERYTHING inside this block happens on the SAME separate DuckDB instance
     async with pool.connection() as conn:
         print("\n--- Step 1: Create Local Dimension Table (in-memory) ---")
         # Creating a temporary table mapping POS_CD (Point of Sale Code) to Country Names
         # This simulates joining a "Dimension" table
-        await asyncio.to_thread(conn.execute, """
+        await asyncio.to_thread(
+            conn.execute,
+            """
             CREATE TEMP TABLE pos_dimensions (
                 code VARCHAR,
                 country_name VARCHAR,
@@ -39,9 +45,10 @@ async def run_join_demo():
                 ('UK', 'United Kingdom', 'EMEA'),
                 ('US', 'United States', 'NA'),
                 ('DE', 'Germany', 'EMEA');
-        """)
+        """,
+        )
         print("Local table 'pos_dimensions' created.")
-        
+
         print("\n--- Step 2: Join Iceberg (S3) with Local Table ---")
         # We will join the remote Iceberg table on POS_CD = code
         query = f"""
@@ -55,13 +62,13 @@ async def run_join_demo():
             GROUP BY d.country_name, d.region
             ORDER BY transaction_count DESC
         """
-        
+
         t0 = time.perf_counter()
         await asyncio.to_thread(conn.execute, query)
         rows = await asyncio.to_thread(conn.fetchall)
         t1 = time.perf_counter()
-        
-        print(f"Join completed in {(t1-t0)*1000:.2f}ms")
+
+        print(f"Join completed in {(t1 - t0) * 1000:.2f}ms")
         print("\nResults:")
         print(f"{'Country':<20} | {'Region':<10} | {'Count':<10}")
         print("-" * 45)
@@ -86,17 +93,18 @@ async def run_join_demo():
         GROUP BY a.POS_CD
         LIMIT 5
     """
-    
+
     t0 = time.perf_counter()
     async with pool.connection() as conn:
-        # Note: In a real scenario, we might parallelize the scans, 
+        # Note: In a real scenario, we might parallelize the scans,
         # but the JOIN happens in the single DuckDB engine.
         await asyncio.to_thread(conn.execute, s3_join_query)
         rows_s3 = await asyncio.to_thread(conn.fetchall)
     t1 = time.perf_counter()
-    
-    print(f"S3-to-S3 Join completed in {(t1-t0)*1000:.2f}ms")
+
+    print(f"S3-to-S3 Join completed in {(t1 - t0) * 1000:.2f}ms")
     print(f"Result: {rows_s3}")
+
 
 if __name__ == "__main__":
     asyncio.run(run_join_demo())

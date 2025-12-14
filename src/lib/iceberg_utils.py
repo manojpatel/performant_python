@@ -1,19 +1,18 @@
 import os
-import subprocess
-import json
-from typing import List, Dict, Any
-from src.lib.duckdb_client import get_pool
+import subprocess  # nosec B404
+
 from src.lib.valkey_cache import valkey_cache
+
 
 @valkey_cache(ttl=300, key_prefix="iceberg_metadata_path")
 async def get_latest_metadata_file(s3_path: str) -> str:
     """
     Finds the latest Iceberg metadata JSON file using AWS CLI.
     Falls back to folder path if failing.
-    
+
     Args:
         s3_path: Base S3 path (folder)
-        
+
     Returns:
         Full S3 URI to the latest .metadata.json file
         OR the original folder path if resolution fails/times out.
@@ -21,16 +20,16 @@ async def get_latest_metadata_file(s3_path: str) -> str:
     try:
         if not s3_path.startswith("s3://"):
             return s3_path
-            
+
         # Extract bucket and prefix
         parts = s3_path.replace("s3://", "").split("/", 1)
         bucket = parts[0]
         prefix = parts[1] if len(parts) > 1 else ""
-        
+
         # Assume metadata is in /metadata subdirectory if not explicitly pointed to
         if not prefix.endswith("/metadata") and "metadata" not in prefix:
             prefix = f"{prefix.rstrip('/')}/metadata/"
-            
+
         # Parse env vars for AWS CLI
         env = os.environ.copy()
         # Ensure region is set
@@ -38,24 +37,30 @@ async def get_latest_metadata_file(s3_path: str) -> str:
             env["AWS_REGION"] = "us-east-1"
 
         print(f"Resolving metadata for {s3_path}...")
-        
+
         # Use AWS CLI to find the latest file (sorted by LastModified)
         # Filter strictly for .metadata.json
         cmd = [
-            "aws", "s3api", "list-objects-v2",
-            "--bucket", bucket,
-            "--prefix", prefix,
-            "--query", "sort_by(Contents[?ends_with(Key, '.metadata.json')], &LastModified)[-1].Key",
-            "--output", "text"
+            "aws",
+            "s3api",
+            "list-objects-v2",
+            "--bucket",
+            bucket,
+            "--prefix",
+            prefix,
+            "--query",
+            "sort_by(Contents[?ends_with(Key, '.metadata.json')], &LastModified)[-1].Key",
+            "--output",
+            "text",
         ]
-        
+
         # Check stderr
-        result = subprocess.run(cmd, env=env, capture_output=True, text=True)
+        result = subprocess.run(cmd, env=env, capture_output=True, text=True)  # nosec B603
         key = result.stdout.strip()
-        
+
         if result.returncode != 0:
             print(f"AWS CLI Error: {result.stderr}")
-            
+
         if key and key != "None":
             full_path = f"s3://{bucket}/{key}"
             print(f"Resolved latest metadata: {full_path}")

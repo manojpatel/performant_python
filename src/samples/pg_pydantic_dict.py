@@ -2,20 +2,28 @@
 PostgreSQL endpoints for user events analytics.
 Demonstrates asyncpg performance and connection pooling.
 """
+
 import time
-from typing import List
+
 from fastapi import HTTPException
+
 from src.lib.postgres_client import get_postgres
-from src.samples.pydantic_models import UserEvent, UserEventResponse, AnalyticsSummary, ConversionFunnel
+from src.samples.pydantic_models import (
+    AnalyticsSummary,
+    ConversionFunnel,
+    UserEvent,
+    UserEventResponse,
+)
 
 
 async def create_event_endpoint(event: UserEvent) -> UserEventResponse:
     """Insert a user event into PostgreSQL."""
     import json
+
     pg = get_postgres()
-    
-    t0 = time.perf_counter()
-    
+
+
+
     row = await pg.fetchrow(
         """
         INSERT INTO user_events (user_id, event_type, page_url, metadata)
@@ -25,21 +33,26 @@ async def create_event_endpoint(event: UserEvent) -> UserEventResponse:
         event.user_id,
         event.event_type,
         event.page_url,
-        json.dumps(event.metadata)  # Convert dict to JSON string
+        json.dumps(event.metadata),  # Convert dict to JSON string
     )
-    
+
     # Parse the returned JSONB field back to dict
     event_data = dict(row)
-    event_data['metadata'] = json.loads(event_data['metadata']) if isinstance(event_data['metadata'], str) else event_data['metadata']
-    
+    event_data["metadata"] = (
+        json.loads(event_data["metadata"])
+        if isinstance(event_data["metadata"], str)
+        else event_data["metadata"]
+    )
+
     return UserEventResponse(**event_data)
 
 
-async def get_user_events_endpoint(user_id: int, limit: int = 100) -> List[UserEventResponse]:
+async def get_user_events_endpoint(user_id: int, limit: int = 100) -> list[UserEventResponse]:
     """Get all events for a specific user."""
     import json
+
     pg = get_postgres()
-    
+
     rows = await pg.fetch(
         """
         SELECT id, user_id, event_type, page_url, metadata, created_at
@@ -49,16 +62,20 @@ async def get_user_events_endpoint(user_id: int, limit: int = 100) -> List[UserE
         LIMIT $2
         """,
         user_id,
-        limit
+        limit,
     )
-    
+
     # Parse metadata JSON string to dict for each row
     events = []
     for row in rows:
         event_data = dict(row)
-        event_data['metadata'] = json.loads(event_data['metadata']) if isinstance(event_data['metadata'], str) else event_data['metadata']
+        event_data["metadata"] = (
+            json.loads(event_data["metadata"])
+            if isinstance(event_data["metadata"], str)
+            else event_data["metadata"]
+        )
         events.append(UserEventResponse(**event_data))
-    
+
     return events
 
 
@@ -68,9 +85,9 @@ async def get_analytics_summary_endpoint() -> AnalyticsSummary:
     Compares PostgreSQL vs DuckDB for OLAP queries.
     """
     pg = get_postgres()
-    
+
     t0 = time.perf_counter()
-    
+
     # Single query with multiple aggregations
     row = await pg.fetchrow(
         """
@@ -84,29 +101,29 @@ async def get_analytics_summary_endpoint() -> AnalyticsSummary:
         FROM user_events
         """
     )
-    
+
     t1 = time.perf_counter()
-    
+
     events_by_type = {
-        "page_view": row['page_views'],
-        "click": row['clicks'],
-        "conversion": row['conversions']
+        "page_view": row["page_views"],
+        "click": row["clicks"],
+        "conversion": row["conversions"],
     }
-    
+
     return AnalyticsSummary(
-        total_events=row['total_events'],
-        unique_users=row['unique_users'],
+        total_events=row["total_events"],
+        unique_users=row["unique_users"],
         events_by_type=events_by_type,
-        avg_duration_seconds=float(row['avg_duration'] or 0),
+        avg_duration_seconds=float(row["avg_duration"] or 0),
         query_time_ms=(t1 - t0) * 1000,
-        source="postgres"
+        source="postgres",
     )
 
 
-async def get_conversion_funnel_endpoint() -> List[ConversionFunnel]:
+async def get_conversion_funnel_endpoint() -> list[ConversionFunnel]:
     """Get conversion funnel by page."""
     pg = get_postgres()
-    
+
     rows = await pg.fetch(
         """
         SELECT 
@@ -127,42 +144,45 @@ async def get_conversion_funnel_endpoint() -> List[ConversionFunnel]:
         LIMIT 20
         """
     )
-    
+
     return [ConversionFunnel(**dict(row)) for row in rows]
 
 
 async def bulk_insert_events_endpoint(count: int = 1000) -> dict:
     """Bulk insert events for performance testing."""
-    import random
     import json
-    
+    import random
+
     if count > 10000:
         raise HTTPException(status_code=400, detail="Max 10,000 events per bulk insert")
-    
+
     pg = get_postgres()
-    
+
     # Prepare batch data
-    events = []
-    for i in range(count):
-        events.append((
-            random.randint(1, 100),  # user_id
-            random.choice(['page_view', 'click', 'conversion']),  # event_type
-            f'/page-{random.randint(1, 20)}',  # page_url
-            json.dumps({"duration": random.randint(1, 60), "test": True})  # metadata as JSON string
-        ))
-    
+    events = [
+        (
+            random.randint(1, 100),  # nosec B311 (test data)
+            random.choice(["page_view", "click", "conversion"]),  # nosec B311
+            f"/page-{random.randint(1, 20)}",  # nosec B311
+            json.dumps(
+                {"duration": random.randint(1, 60), "test": True}  # nosec B311
+            ),  # metadata as JSON string
+        )
+        for _ in range(count)
+    ]
+
     t0 = time.perf_counter()
-    
+
     # Use executemany for batch insert
     await pg._pool.executemany(
         "INSERT INTO user_events (user_id, event_type, page_url, metadata) VALUES ($1, $2, $3, $4)",
-        events
+        events,
     )
-    
+
     t1 = time.perf_counter()
-    
+
     return {
         "inserted": count,
         "query_time_ms": (t1 - t0) * 1000,
-        "inserts_per_second": int(count / (t1 - t0))
+        "inserts_per_second": int(count / (t1 - t0)),
     }

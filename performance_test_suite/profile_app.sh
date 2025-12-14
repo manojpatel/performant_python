@@ -5,14 +5,7 @@ echo "🔬 Performance Profiling Script"
 echo "================================"
 echo ""
 
-# Check if py-spy is installed
-if ! command -v py-spy &> /dev/null; then
-    echo "📦 Installing py-spy..."
-    cargo install py-spy || {
-        echo "⚠️  cargo not found. Trying pip3..."
-        pip3 install py-spy
-    }
-fi
+# Note: We rely on py-spy being installed in the container (via pyproject.toml)
 
 # Get container PID for granian worker
 echo "🔍 Finding Python worker process..."
