@@ -97,7 +97,7 @@ async def batch_processing_msgspec(batch: BatchData = Body(...)):
     """
     from src.samples.msgspec_models import FastProcessingStats
     raw_data = [d.model_dump() for d in batch.data]
-    stats = await process_data_batch(raw_data)
+    stats = await process_data_batch(batch.batch_id, raw_data)
     # Return dict for JSON serialization
     result = FastProcessingStats(**stats.model_dump())
     return msgspec.structs.asdict(result)

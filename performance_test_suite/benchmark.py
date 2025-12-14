@@ -6,7 +6,7 @@ import json
 from statistics import mean
 
 # Configuration
-BASE_URL = "http://127.0.0.1:8081"
+BASE_URL = "http://127.0.0.1:8080"
 BATCH_SIZE = 5000  # Records per request
 NUM_REQUESTS = 50  # Total requests per endpoint
 CONCURRENCY = 5    # Concurrent requests
@@ -72,21 +72,21 @@ async def main():
     
     # 1. Standard (Pydantic + Polars)
     try:
-        res = await benchmark_endpoint("Standard (Pydantic+Polars)", "/process", payload)
+        res = await benchmark_endpoint("Standard (Pydantic+Polars)", "/samples/batch", payload)
         results.append(res)
     except Exception as e:
         print(f"Standard failed: {e}")
 
     # 2. Msgspec (Msgspec + Polars)
     try:
-        res = await benchmark_endpoint("Optimized (Msgspec+Polars)", "/process-msgspec", payload)
+        res = await benchmark_endpoint("Optimized (Msgspec+Polars)", "/samples/batch-msgspec", payload)
         results.append(res)
     except Exception as e:
         print(f"Msgspec failed: {e}")
 
     # 3. DuckDB (SQL)
     try:
-        res = await benchmark_endpoint("SQL Engine (DuckDB)", "/process-duckdb", payload)
+        res = await benchmark_endpoint("SQL Engine (DuckDB)", "/samples/duckdb", payload)
         results.append(res)
     except Exception as e:
         print(f"DuckDB failed: {e}")

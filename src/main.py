@@ -23,8 +23,8 @@ async def lifespan(app: FastAPI):
     
     # Initialize DuckDB connection pool
     from src.lib.duckdb_client import init_pool
-    init_pool(database=":memory:", pool_size=4)
-    logger.info("duckdb_pool_initialized", database=":memory:", pool_size=4)
+    init_pool(database=":memory:", pool_size=20)
+    logger.info("duckdb_pool_initialized", database=":memory:", pool_size=20)
     
     # Initialize Search Index (for samples)
     import asyncio

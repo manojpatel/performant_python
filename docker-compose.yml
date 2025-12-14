@@ -11,6 +11,9 @@ services:
       - ENABLE_TRACING=true # Toggle this to false to disable tracing
       - OTEL_SERVICE_NAME=performant-python
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+      # Tracing Sampling Configuration (Optional)
+      # - OTEL_TRACES_SAMPLER=parentbased_traceidratio
+      # - OTEL_TRACES_SAMPLER_ARG=0.1 # Sample 10% of requests
       - VALKEY_URL=valkey://valkey:6379
       - POSTGRES_URL=postgresql://performant:secretpass@postgres:5432/analytics
       # AWS Credentials for Iceberg S3 Access
