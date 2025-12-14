@@ -10,13 +10,17 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+from src.lib.logger import get_logger
+
+logger = get_logger(__name__)
+
 def init_tracing():
     """Initialize OpenTelemetry tracing if ENABLE_TRACING is true."""
     if os.getenv("ENABLE_TRACING", "false").lower() != "true":
-        print("⏭️  Tracing disabled, skipping OpenTelemetry initialization")
+        logger.info("tracing_disabled", message="Skipping OpenTelemetry initialization")
         return False
     
-    print("🔧 Initializing OpenTelemetry SDK...")
+    logger.info("tracing_initializing", message="Starting OpenTelemetry SDK")
     
     # Create resource with service name
     resource = Resource(attributes={
@@ -34,11 +38,13 @@ def init_tracing():
     # Set as global tracer provider
     trace.set_tracer_provider(provider)
     
-    print(f"✅ OpenTelemetry initialized | Endpoint: {otlp_endpoint}")
+    logger.info("tracing_initialized", 
+               endpoint=otlp_endpoint,
+               service_name=os.getenv("OTEL_SERVICE_NAME", "performant-python"))
     return True
 
 def instrument_fastapi(app):
     """Instrument FastAPI app if tracing is enabled."""
     if os.getenv("ENABLE_TRACING", "false").lower() == "true":
         FastAPIInstrumentor.instrument_app(app)
-        print("✅ FastAPI instrumented for tracing")
+        logger.info("fastapi_instrumented", message="FastAPI instrumented for tracing")

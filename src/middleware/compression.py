@@ -7,6 +7,10 @@ import zstandard as zstd
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from src.lib.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class ZstdMiddleware:
     """
@@ -108,11 +112,20 @@ class ZstdResponder:
                     await self.send({"type": "http.response.body", "body": bytes(self.buffer)})
                 else:
                     # Compress and send
+                    original_size = len(self.buffer)
                     compressed = self.compressor.compress(bytes(self.buffer))
+                    compressed_size = len(compressed)
+                    compression_ratio = (1 - compressed_size / original_size) * 100 if original_size > 0 else 0
+                    
+                    # Log compression metrics
+                    logger.debug("response_compressed",
+                               original_size=original_size,
+                               compressed_size=compressed_size,
+                               compression_ratio_percent=round(compression_ratio, 2))
                     
                     # Update headers
                     headers["content-encoding"] = "zstd"
-                    headers["content-length"] = str(len(compressed))
+                    headers["content-length"] = str(compressed_size)
                     if "vary" in headers:
                         headers["vary"] = headers["vary"] + ", Accept-Encoding"
                     else:
@@ -122,5 +135,7 @@ class ZstdResponder:
                     self.initial_message["headers"] = headers.raw
                     
                     # Send compressed response
+                    await self.send(self.initial_message)
+                    await self.send({"type": "http.response.body", "body": compressed})
                     await self.send(self.initial_message)
                     await self.send({"type": "http.response.body", "body": compressed})

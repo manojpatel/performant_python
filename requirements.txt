@@ -32,3 +32,8 @@ tantivy>=0.22.0         # Latest stable (0.25.1 available)
 opentelemetry-distro>=0.48b0
 opentelemetry-exporter-otlp>=1.27.0
 opentelemetry-instrumentation-fastapi>=0.48b0
+
+# Structured Logging
+structlog>=24.1.0          # Production-grade structured logging
+python-json-logger>=2.0.7  # JSON formatter support
+colorama>=0.4.6            # Colored console output for development

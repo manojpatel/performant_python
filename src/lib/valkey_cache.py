@@ -17,6 +17,10 @@ import xxhash
 import orjson
 from opentelemetry import trace
 
+from src.lib.logger import get_logger
+
+logger = get_logger(__name__)
+
 tracer = trace.get_tracer("performant-python.valkey-cache")
 
 
@@ -40,9 +44,10 @@ class ValkeyCache:
         # Test connection
         try:
             await self._pool.ping()
-            print(f"✅ Valkey connected at {self.url}")
+            logger.info("valkey_connected", url=self.url, max_connections=10)
         except Exception as e:
-            print(f"⚠️  Valkey connection failed: {e}. Cache will be disabled.")
+            logger.warning("valkey_connection_failed", url=self.url, error=str(e), 
+                         message="Cache will be disabled")
     
     async def close(self):
         """Close Valkey connection pool."""
@@ -61,7 +66,7 @@ class ValkeyCache:
                     return orjson.loads(data)
                 return None
         except Exception as e:
-            print(f"Valkey GET error for key {key}: {e}")
+            logger.error("valkey_get_error", key=key, error=str(e), exc_info=True)
             return None
     
     async def set(self, key: str, value: Any, ttl: int = 300):
@@ -74,7 +79,7 @@ class ValkeyCache:
                 serialized = orjson.dumps(value)
                 await self._pool.setex(key, ttl, serialized)
         except Exception as e:
-            print(f"Valkey SET error for key {key}: {e}")
+            logger.error("valkey_set_error", key=key, ttl=ttl, error=str(e), exc_info=True)
     
     async def delete(self, key: str):
         """Delete key from cache."""
@@ -84,7 +89,7 @@ class ValkeyCache:
         try:
             await self._pool.delete(key)
         except Exception as e:
-            print(f"Valkey DELETE error for key {key}: {e}")
+            logger.error("valkey_delete_error", key=key, error=str(e), exc_info=True)
 
 
 # Global cache instance

@@ -8,6 +8,10 @@ from queue import Queue, Empty
 from contextlib import asynccontextmanager
 from typing import Optional
 
+from src.lib.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class DuckDBConnectionPool:
     """Thread-safe DuckDB connection pool."""

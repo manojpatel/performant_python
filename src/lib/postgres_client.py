@@ -10,6 +10,10 @@ from typing import Optional, List, Dict, Any
 import asyncpg
 from opentelemetry import trace
 
+from src.lib.logger import get_logger
+
+logger = get_logger(__name__)
+
 tracer = trace.get_tracer("performant-python.postgres")
 
 
@@ -54,29 +58,38 @@ class PostgresPool:
                 # Test connection
                 async with self._pool.acquire() as conn:
                     version = await conn.fetchval('SELECT version()')
-                    print(f"🐘 PostgreSQL connected: {version.split(',')[0]}")
+                    logger.info("postgres_connected", 
+                              version=version.split(',')[0],
+                              min_size=min_size,
+                              max_size=max_size)
                     
                     # Get table stats
                     count = await conn.fetchval('SELECT COUNT(*) FROM user_events')
-                    print(f"📊 Loaded {count} user events")
+                    logger.info("postgres_table_stats", table="user_events", row_count=count)
                 
                 return
                 
             except Exception as e:
                 if attempt < max_retries - 1:
-                    print(f"⚠️  PostgreSQL connection attempt {attempt + 1} failed: {e}")
-                    print(f"   Retrying in {retry_delay}s...")
+                    logger.warning("postgres_connection_retry",
+                                 attempt=attempt + 1,
+                                 max_retries=max_retries,
+                                 retry_delay=retry_delay,
+                                 error=str(e))
                     await asyncio.sleep(retry_delay)
                     retry_delay *= 2  # Exponential backoff
                 else:
-                    print(f"❌ PostgreSQL connection failed after {max_retries} attempts: {e}")
-                    print("   Database features will be disabled.")
+                    logger.error("postgres_connection_failed",
+                               attempts=max_retries,
+                               error=str(e),
+                               message="Database features will be disabled",
+                               exc_info=True)
     
     async def close(self):
         """Close the connection pool."""
         if self._pool:
             await self._pool.close()
-            print("🐘 PostgreSQL connection pool closed")
+            logger.info("postgres_pool_closed")
     
     async def execute(self, query: str, *args) -> str:
         """
