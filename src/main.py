@@ -14,7 +14,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown lifecycle."""
-    logger.info("application_startup", event="starting")
+    logger.info("application_startup", stage="starting")
     
     # Initialize Valkey cache
     from src.lib.valkey_cache import init_valkey_cache
@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
     from src.lib.postgres_client import get_postgres
     await get_valkey_cache().close()
     await get_postgres().close()
-    logger.info("application_shutdown", event="cleanup_complete")
+    logger.info("application_shutdown", stage="cleanup_complete")
 
 
 # =============================================================================
@@ -71,6 +71,10 @@ app.add_middleware(
     minimum_size=1000,
     compression_level=3
 )
+
+# Add Request ID Middleware (should be early in the stack)
+from src.middleware.log_correlation import RequestIdMiddleware
+app.add_middleware(RequestIdMiddleware)
 
 
 # =============================================================================

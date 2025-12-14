@@ -14,6 +14,8 @@ import structlog
 from structlog.types import EventDict, WrappedLogger
 from typing import Any
 from opentelemetry import trace
+from opentelemetry import trace
+from src.middleware.log_correlation import get_request_id
 
 
 def add_open_telemetry_spans(
@@ -25,6 +27,37 @@ def add_open_telemetry_spans(
         ctx = span.get_span_context()
         event_dict["trace_id"] = format(ctx.trace_id, "032x")
         event_dict["span_id"] = format(ctx.span_id, "016x")
+    return event_dict
+
+
+    return event_dict
+
+
+def add_request_id(
+    logger: WrappedLogger, method_name: str, event_dict: EventDict
+) -> EventDict:
+    """Add request_id to log records if available in context."""
+    req_id = get_request_id()
+    if req_id:
+        event_dict["request_id"] = req_id
+    return event_dict
+
+
+def emit_opentelemetry_event(
+    logger: WrappedLogger, method_name: str, event_dict: EventDict
+) -> EventDict:
+    """Emit the log entry as an OpenTelemetry Span Event."""
+    span = trace.get_current_span()
+    if span and span.is_recording():
+        # Clean attributes (exclude timestamp/event which are redundant)
+        attributes = {k: str(v) for k, v in event_dict.items() 
+                     if k not in ("event", "timestamp")}
+        attributes["level"] = method_name
+        
+        span.add_event(
+            name=event_dict.get("event", "log"),
+            attributes=attributes
+        )
     return event_dict
 
 
@@ -63,8 +96,12 @@ def configure_structlog(json_logs: bool = None) -> None:
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         # Add logger name
         structlog.stdlib.add_logger_name,
+        # Add Request ID
+        add_request_id,
         # Add OpenTelemetry trace context
         add_open_telemetry_spans,
+        # Emit as OpenTelemetry Span Event
+        emit_opentelemetry_event,
         # Add app context
         add_app_context,
         # Stack traces for exceptions

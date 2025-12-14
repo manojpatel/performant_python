@@ -11,6 +11,9 @@ import msgspec
 from src.samples.pydantic_models import BatchData, ProcessingStats, UserEvent, UserEventResponse, AnalyticsSummary, ConversionFunnel
 from src.samples.services import process_data_batch, generate_large_dataset, process_with_duckdb, get_batch_stats_cached, get_batch_stats_with_decorator
 from src.samples.extras import render_report, SearchEngine
+from src.lib.logger import get_logger
+
+logger = get_logger(__name__)
 
 # Create router for all sample/test endpoints
 router = APIRouter(tags=["Samples & Testing"])
@@ -23,6 +26,18 @@ router = APIRouter(tags=["Samples & Testing"])
 @router.get("/")
 async def sample_root():
     """Sample root endpoint - demonstrates basic FastAPI + ORJSON."""
+    # Structured logging example
+    logger.info("sample_root_accessed", 
+        endpoint="/samples/",
+        user_context={
+            "id": 123, 
+            "role": "admin"
+        },
+        meta={
+            "source": "demo", 
+            "version": "1.0"
+        }
+    )
     return {"message": "Sample routes for testing framework capabilities"}
 
 

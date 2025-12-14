@@ -314,3 +314,35 @@ MIT License - feel free to use for your projects!
 ---
 
 **Built to demonstrate that Python can be blazingly fast while maintaining its AI/ML supremacy.** 🚀
+
+---
+
+## 📜 Logging & Correlation Guide
+
+This project includes a production-grade logging and tracing setup.
+
+### 1. How to Log
+Use the `logger` instance. The syntax is `logger.info(event_name, **kwargs)`.
+
+```python
+logger.info("payment_processed", user_id=42, amount=100.50, currency="USD")
+```
+
+### 2. Special Keywords
+*   **`event` (Positional Argument 1)**: This is the **name** of the log event. It is mandatory.
+    *   *In Logs*: Appears as `"event": "payment_processed"`.
+    *   *In Jaeger*: Appears as the **Name** of the Span Event.
+*   **`timestamp` (Automatic)**: Added automatically by the system.
+    *   *In Jaeger*: Used to correctly position the event on the timeline.
+
+### 3. Correlation with Jaeger
+If Tracing is **ENABLED** (`ENABLE_TRACING=true`):
+*   **Automatic**: Every log you write is automatically attached to the current active Trace Span.
+*   **Trace ID**: The log in `stdout` will automatically contain `trace_id` and `span_id`.
+*   **Visualization**: Open Jaeger, find the trace, and look for "Logs" (Events) on the span.
+
+### 4. Correlation without Tracing (Fallback)
+If Tracing is **DISABLED** (or sampled out):
+*   **Request ID**: A unique `request_id` (UUID) is automatically generated for every request.
+*   **Persistence**: This ID is present in **every log line** (`"request_id": "..."`).
+*   **Usage**: Copy the `request_id` from one log and grep for it to see the full request history.
