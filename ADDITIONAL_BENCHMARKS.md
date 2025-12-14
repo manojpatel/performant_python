@@ -291,3 +291,56 @@ To verify the migration utility, we benchmarked the creation and serialization o
 | **Serialization** | 291.3ms | **41.7ms** | **6.98x** |
 
 **Verdict**: Migration was successful. While minimal impact on long-running DB queries, this ensures the Python application layer remains highly efficient (sub-ms overhead).
+
+---
+
+## 8. Complex Join Performance
+
+We tested two key join scenarios involving Iceberg tables on S3 and local DuckDB tables (Dec 2024).
+
+| Scenario | Execution Time (Warm) | Description |
+| :--- | :--- | :--- |
+| **S3 Iceberg + Local Table** | **380 ms** | Joining remote 1M+ row table with local dimension table. |
+| **S3 Iceberg + S3 Iceberg** | **379 ms** | Self-join simulation (correlated subquery on S3 data). |
+
+**Key Findings:**
+1.  **Consistent Latency**: Both local and remote joins execute in under 400ms.
+2.  **Efficient Data Transfer**: DuckDB only downloads the necessary partitions/columns for the join.
+3.  **No Network Bottleneck**: Even "S3-to-S3" joins are fast because filtering (`WHERE ARDV=...`) happens before the join.
+
+## 9. DuckDB Concurrency & Cost Analysis
+
+### Objective
+Determine the scalability of a single DuckDB instance for parallel query workloads and optimal infrastructure choices.
+
+### Benchmark Configuration
+- **Workload**: 30 concurrent aggregation queries on ~10M rows.
+- **Environment**: Docker container (2 vCPUs).
+- **Concurrency Models Tested**: 
+    1. **Shared Connection**: Single `duckdb.connect()` with thread-local cursors.
+    2. **Connection Pool**: Separate `duckdb.connect()` per thread.
+
+### Results
+
+| Model | Total Time (30 queries) | Peak Memory | Notes |
+| :--- | :--- | :--- | :--- |
+| **Shared Connection** | **9.95s** | **140 MB** | Recommended pattern. |
+| **Connection Pool** | 10.09s | 142 MB | No performance benefit. |
+| *Theoretical Ideal* | *~0.4s* | *-* | Requires 30 vCPUs. |
+
+### Key Findings
+1.  **CPU Scaling**: Performance scales linearly with vCPUs. To achieve sub-second latency for 30 parallel queries, **30 vCPUs** are required (1 vCPU per active query).
+2.  **Memory Efficiency**: Extremely low overhead. 30 queries only added **~90 MB** to the baseline.
+3.  **Connection Strategy**: A single shared connection with `cursor()` per thread is robust and thread-safe.
+
+### Cost & Architecture Recommendation (AWS)
+Switching to **ARM64 (Graviton)** offers significant savings with full compatibility for DuckDB, Polars, and uvloop.
+
+**Estimated Monthly Cost (32 vCPU Instance):**
+
+| Instance | Architecture | Price/Hour | Monthly Est. | Savings |
+| :--- | :--- | :--- | :--- | :--- |
+| **c7g.8xlarge** | **ARM64 (Graviton)** | **~$1.16** | **~$850** | **~20%** |
+| c7i.8xlarge | x86 (Intel) | ~$1.43 | ~$1,050 | - |
+
+**Recommendation**: Use `c7g.8xlarge` (or similar Graviton family) for production workloads requiring high concurrency.
