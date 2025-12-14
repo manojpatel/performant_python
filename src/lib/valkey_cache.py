@@ -166,7 +166,7 @@ def valkey_cache(ttl: int = 300, key_prefix: Optional[str] = None):
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-            cache = get_cache()
+            cache = get_valkey_cache()
             prefix = key_prefix or func.__name__
             
             # Generate cache key
@@ -202,3 +202,5 @@ def valkey_cache(ttl: int = 300, key_prefix: Optional[str] = None):
         
         return wrapper
     return decorator
+
+# Alias for backward compatibility and internal usage

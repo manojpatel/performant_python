@@ -36,9 +36,9 @@ async def lifespan(app: FastAPI):
     yield
     
     # Cleanup
-    from src.lib.valkey_cache import get_cache
+    from src.lib.valkey_cache import get_valkey_cache
     from src.lib.postgres_client import get_postgres
-    await get_cache().close()
+    await get_valkey_cache().close()
     await get_postgres().close()
     print("🛑 application shutting down...")
 

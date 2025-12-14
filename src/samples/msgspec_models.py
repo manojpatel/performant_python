@@ -59,3 +59,13 @@ class AnalyticsSummaryMsg(msgspec.Struct):
     avg_duration_seconds: float
     query_time_ms: float
     source: str
+
+class IcebergBenchmarkResult(msgspec.Struct):
+    """
+    Result of an Iceberg performance benchmark test (msgspec).
+    """
+    test_name: str
+    duration_ms: float
+    result_summary: dict
+    scanned_record_count: int = 0
+

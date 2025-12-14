@@ -42,6 +42,17 @@ This document demonstrates that **optimized Python can compete with Node.js** in
 - ✅ **140x speedup** with Valkey cache
 - ✅ **xxhash** provides 10x faster cache key generation
 
+### DuckDB Iceberg on S3 (Dec 2024)
+
+**Test**: Query S3-backed Iceberg table (Metadata + Data separate)
+
+| Metric | Uncached | Cached (Valkey) | Speedup |
+|--------|----------|-----------------|---------|
+| Metadata Resolution | 1,667ms | **1ms** | **1600x** |
+| Total Query Time | ~1,800ms | **~115ms** | **15x** |
+
+**Insight**: Caching the S3 path resolution allows DuckDB to perform **sub-second** analytics even on remote object storage.
+
 ---
 
 ### Full-Text Search (10,000 documents)

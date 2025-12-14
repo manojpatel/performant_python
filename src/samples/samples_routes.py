@@ -185,6 +185,16 @@ async def compare_analytics_engines():
     return await compare_engines_analytics()
 
 
+@router.get("/iceberg/benchmark")
+async def benchmark_iceberg(s3_path: str = "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data_iceberg"):
+    """
+    Run performance benchmarks on Iceberg table in S3.
+    Demonstrates: DuckDB Iceberg extension, S3 integration, Clustered Query Performance
+    """
+    from performance_test_suite.iceberg_runner import run_iceberg_benchmarks
+    return await run_iceberg_benchmarks(s3_path)
+
+
 # =============================================================================
 # PostgreSQL Production Endpoints
 # =============================================================================

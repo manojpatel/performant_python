@@ -81,3 +81,13 @@ class ConversionFunnel(BaseModel):
     clicks: int
     conversions: int
     conversion_rate: float
+
+class IcebergBenchmarkResult(BaseModel):
+    """
+    Result of an Iceberg performance benchmark test.
+    """
+    test_name: str
+    duration_ms: float
+    result_summary: dict
+    scanned_record_count: Optional[int] = None
+
