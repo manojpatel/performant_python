@@ -1,6 +1,4 @@
-
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path
@@ -11,15 +9,15 @@ sys.path.append(str(Path.cwd()))
 from src.lib.duckdb_client import get_pool, init_pool
 
 PARQUET_FILE = (
-        "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data/ARDV=2025-05-31/"
-        "CRID=000000000000000000000000000000000015/SS_ID=00000000000000000000000000000000/load_timestamp=2024-11-20T00%3A00%3A00Z/"
-        "CR_TY_CD=XXAR/SHOP_CAR_TYPE_CD=XXAR/POS_CD=UK/00015-27-4c50d32e-0192-46d9-82b8-e3573dc8b12d-01394.parquet"
-    )
+    "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data/ARDV=2025-05-31/"
+    "CRID=000000000000000000000000000000000015/SS_ID=00000000000000000000000000000000/load_timestamp=2024-11-20T00%3A00%3A00Z/"
+    "CR_TY_CD=XXAR/SHOP_CAR_TYPE_CD=XXAR/POS_CD=UK/00015-27-4c50d32e-0192-46d9-82b8-e3573dc8b12d-01394.parquet"
+)
 BUCKET = "liquid-crystal-bucket-manoj"
 S3_URI = PARQUET_FILE
 
 
-async def main():
+async def main() -> None:
     print("Benchmarking Direct Parquet Performance...")
     print(f"Target: {S3_URI}")
 
@@ -30,7 +28,7 @@ async def main():
     async with pool.connection() as conn:
         print("\n--- Test 1: Single File Count ---")
         t0 = time.perf_counter()
-        res = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{S3_URI}')").fetchall()
+        res = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{S3_URI}')").fetchall()  # nosec B608
         t1 = time.perf_counter()
 
         count = res[0][0]
@@ -43,7 +41,7 @@ async def main():
         print("\n--- Test 2: Select Specific Column (POS_CD) ---")
         t0 = time.perf_counter()
         # fetching just POS_CD to prove data access is fast
-        res = conn.execute(f"SELECT POS_CD FROM read_parquet('{S3_URI}') LIMIT 5").fetchall()
+        res = conn.execute(f"SELECT POS_CD FROM read_parquet('{S3_URI}') LIMIT 5").fetchall()  # nosec B608
         t1 = time.perf_counter()
         duration = (t1 - t0) * 1000
         print(f"Result: {len(res)} rows")
@@ -56,7 +54,7 @@ async def main():
         print(f"Glob: {glob_path}")
         t0 = time.perf_counter()
         # fetching count across ~900 files
-        res = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{glob_path}')").fetchall()
+        res = conn.execute(f"SELECT COUNT(*) FROM read_parquet('{glob_path}')").fetchall()  # nosec B608
         t1 = time.perf_counter()
         duration = (t1 - t0) * 1000
         print(f"Result: {res[0][0]} rows")

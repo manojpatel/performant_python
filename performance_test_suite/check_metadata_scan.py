@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path
@@ -13,7 +12,7 @@ from src.lib.duckdb_client import get_pool, init_pool
 METADATA_FILE = "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data_iceberg/metadata/00000-0be473ef-56f4-4b6e-9144-7108878e6828.metadata.json"
 
 
-async def main():
+async def main() -> None:
     print("Benchmarking Explicit Metadata Scan...")
     print(f"Target: {METADATA_FILE}")
 
@@ -26,7 +25,7 @@ async def main():
         try:
             t0 = time.perf_counter()
             # DuckDB allows passing the metadata file directly
-            res = conn.execute(f"SELECT COUNT(*) FROM iceberg_scan('{METADATA_FILE}')").fetchall()
+            res = conn.execute(f"SELECT COUNT(*) FROM iceberg_scan('{METADATA_FILE}')").fetchall()  # nosec B608
             t1 = time.perf_counter()
 
             count = res[0][0]
@@ -39,7 +38,7 @@ async def main():
             t0 = time.perf_counter()
             # iceberg_snapshots returns snapshot metadata
             res = conn.execute(
-                f"SELECT * FROM iceberg_snapshots('{METADATA_FILE}') LIMIT 5"
+                f"SELECT * FROM iceberg_snapshots('{METADATA_FILE}') LIMIT 5"  # nosec B608
             ).fetchall()
             for r in res:
                 print(f"Snapshot: {r}")

@@ -1,5 +1,4 @@
 import asyncio
-import os
 import statistics
 import sys
 import time
@@ -16,7 +15,7 @@ from src.lib.valkey_cache import init_valkey_cache
 ITERATIONS = 5
 
 
-async def main():
+async def main() -> None:
     print(f"Running Aggregated Benchmarks ({ITERATIONS} iterations)...")
     print("---------------------------------------------------------")
 

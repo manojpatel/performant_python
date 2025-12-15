@@ -1,8 +1,7 @@
-import os
 import sys
 import time
-
 from pathlib import Path
+from typing import Any
 
 import msgspec
 
@@ -19,11 +18,11 @@ from src.samples.msgspec_models import IcebergBenchmarkResult as MsgspecResult
 class PydanticResult(BaseModel):
     test_name: str
     duration_ms: float
-    result_summary: dict
+    result_summary: dict[str, Any]
     scanned_record_count: int | None = 0
 
 
-def benchmark():
+def benchmark() -> None:
     N = 100_000
     print(f"Benchmarking Instantiation of {N} objects...")
 

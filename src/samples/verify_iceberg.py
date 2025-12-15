@@ -1,7 +1,6 @@
 import asyncio
-import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Add src to path
 sys.path.append(str(Path.cwd()))
@@ -11,7 +10,7 @@ from src.lib.valkey_cache import init_valkey_cache
 from src.samples.samples_routes import benchmark_iceberg
 
 
-async def test_iceberg_function():
+async def test_iceberg_function() -> None:
     print("Testing Iceberg logic directly (bypassing HTTP layer)...")
 
     # Init dependencies

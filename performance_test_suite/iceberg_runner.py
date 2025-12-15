@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path
@@ -32,17 +31,17 @@ async def run_iceberg_benchmarks(
     queries = [
         {
             "name": "Full Table Scan (Count)",
-            "sql": f"SELECT COUNT(*) as count FROM iceberg_scan('{optimized_path}')",
+            "sql": f"SELECT COUNT(*) as count FROM iceberg_scan('{optimized_path}')",  # nosec B608
         },
         {
             "name": "Clustered Filter (Single Value)",
             "sql": f"SELECT COUNT(*) as count FROM iceberg_scan('{optimized_path}') "
-            f"WHERE ARDV = '2025-05-31'",
+            f"WHERE ARDV = '2025-05-31'",  # nosec B608
         },
         {
             "name": "Aggregation by Cluster Key",
             "sql": f"SELECT CAST(ARDV AS VARCHAR) as ARDV, COUNT(*) as count "
-            f"FROM iceberg_scan('{optimized_path}') GROUP BY ARDV",
+            f"FROM iceberg_scan('{optimized_path}') GROUP BY ARDV",  # nosec B608
         },
         {
             "name": "Complex Filter & Aggregation",
@@ -51,7 +50,7 @@ async def run_iceberg_benchmarks(
                 FROM iceberg_scan('{optimized_path}') 
                 WHERE ARDV > '2024-01-01' 
                 GROUP BY ARDV
-            """,
+            """,  # nosec B608
         },
     ]
 
@@ -78,10 +77,7 @@ async def run_iceberg_benchmarks(
 
                 rows_count = (
                     rows[0][0]
-                    if rows
-                    and len(rows) > 0
-                    and len(rows[0]) > 0
-                    and isinstance(rows[0][0], (int, float))
+                    if rows and rows[0] and isinstance(rows[0][0], (int, float))
                     else len(rows)
                 )
 
@@ -89,12 +85,8 @@ async def run_iceberg_benchmarks(
                     IcebergBenchmarkResult(
                         test_name=q["name"],
                         duration_ms=duration,
-                        result_summary={
-                            "value": str(rows[0][0])
-                            if rows and len(rows) > 0 and len(rows[0]) > 0
-                            else "Empty"
-                        },
-                        scanned_record_count=rows_count,
+                        result_summary={"value": str(rows[0][0]) if rows and rows[0] else "Empty"},
+                        scanned_record_count=int(rows_count),
                     )
                 )
             except Exception as e:

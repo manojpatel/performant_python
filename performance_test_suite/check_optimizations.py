@@ -1,8 +1,7 @@
 import asyncio
-import os
 import sys
-from pathlib import Path
 import time
+from pathlib import Path
 
 # Add src to path
 sys.path.append(str(Path.cwd()))
@@ -16,7 +15,7 @@ METADATA_FILE = "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_da
 PARTITION_FILTER = "2026-05-31 00:00:00+00"
 
 
-async def main():
+async def main() -> None:
     print("Benchmarking Optimizations...")
 
     # Init pool
@@ -30,14 +29,14 @@ async def main():
         # 1. Baseline: Standard Folder Scan
         print("\n--- 1. Baseline: Standard Folder Path ---")
         t0 = time.perf_counter()
-        conn.execute(f"SELECT COUNT(*) FROM iceberg_scan('{FOLDER_PATH}')").fetchall()
+        conn.execute(f"SELECT COUNT(*) FROM iceberg_scan('{FOLDER_PATH}')").fetchall()  # nosec B608
         t1 = time.perf_counter()
         print(f"Duration: {(t1 - t0) * 1000:.2f}ms")
 
         # 2. Optimization: Explicit Metadata File
         print("\n--- 2. Opt: Explicit Metadata File ---")
         t0 = time.perf_counter()
-        conn.execute(f"SELECT COUNT(*) FROM iceberg_scan('{METADATA_FILE}')").fetchall()
+        conn.execute(f"SELECT COUNT(*) FROM iceberg_scan('{METADATA_FILE}')").fetchall()  # nosec B608
         t1 = time.perf_counter()
         print(f"Duration: {(t1 - t0) * 1000:.2f}ms")
 
@@ -46,7 +45,7 @@ async def main():
         # or at least only read the relevant partition's files.
         print("\n--- 3. Opt: Partition Pruning (Where ARDV = ...) ---")
         query = (
-            f"SELECT COUNT(*) FROM iceberg_scan('{METADATA_FILE}') "
+            f"SELECT COUNT(*) FROM iceberg_scan('{METADATA_FILE}') "  # nosec B608
             f"WHERE ARDV = '{PARTITION_FILTER}'"
         )
         t0 = time.perf_counter()
@@ -66,9 +65,7 @@ async def main():
         t0 = time.perf_counter()
         # CAST needed for ARDV if we selected it, but here we select POS_CD
         # CAST needed for ARDV if we selected it, but here we select POS_CD
-        conn.execute(
-            f"SELECT POS_CD FROM iceberg_scan('{METADATA_FILE}') LIMIT 10"
-        ).fetchall()
+        conn.execute(f"SELECT POS_CD FROM iceberg_scan('{METADATA_FILE}') LIMIT 10").fetchall()  # nosec B608
         t1 = time.perf_counter()
         print(f"Duration: {(t1 - t0) * 1000:.2f}ms")
 
@@ -77,7 +74,7 @@ async def main():
         # Aggregating on the partition key should be ultra fast as it comes from metadata
         t0 = time.perf_counter()
         conn.execute(
-            f"SELECT CAST(ARDV as VARCHAR), COUNT(*) FROM iceberg_scan('{METADATA_FILE}') "
+            f"SELECT CAST(ARDV as VARCHAR), COUNT(*) FROM iceberg_scan('{METADATA_FILE}') "  # nosec B608
             f"GROUP BY 1"
         ).fetchall()
         t1 = time.perf_counter()

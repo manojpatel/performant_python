@@ -1,4 +1,6 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
@@ -14,7 +16,7 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup and shutdown lifecycle."""
     logger.info("application_startup", stage="starting")
 
@@ -64,7 +66,7 @@ from src.middleware.telemetry import init_tracing, instrument_fastapi  # noqa: E
 
 init_tracing()
 
-app = FastAPI(
+app: FastAPI = FastAPI(
     title="Performant Python Demo", default_response_class=ORJSONResponse, lifespan=lifespan
 )
 
@@ -88,7 +90,7 @@ app.add_middleware(RequestIdMiddleware)
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, Any]:
     """Health check / root endpoint."""
     return {
         "message": "Performant Python API",
@@ -116,9 +118,14 @@ app.include_router(samples_router, prefix="/samples")
 # =============================================================================
 
 if __name__ == "__main__":
-    import granian
+    from granian import Granian
+    from granian.constants import Interfaces
 
     print("Starting Granian server...")
-    granian.Granian(
-        target="src.main:app", address="0.0.0.0", port=8080, interface="asgi", workers=1, threads=1  # nosec B104
+    Granian(
+        target="src.main:app",
+        address="0.0.0.0",  # nosec B104
+        port=8080,
+        interface=Interfaces.ASGI,
+        workers=1,
     ).serve()

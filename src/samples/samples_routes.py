@@ -4,6 +4,7 @@ Framework capabilities, benchmarks, and experimental features
 """
 
 import time
+from typing import Any
 
 import msgspec
 from fastapi import APIRouter, Body
@@ -11,6 +12,7 @@ from fastapi.responses import HTMLResponse, Response
 
 from src.lib.logger import get_logger
 from src.samples.extras import SearchEngine, render_report
+from src.samples.msgspec_models import IcebergBenchmarkResult
 from src.samples.pydantic_models import (
     AnalyticsSummary,
     BatchData,
@@ -39,7 +41,7 @@ router = APIRouter(tags=["Samples & Testing"])
 
 
 @router.get("/")
-async def sample_root():
+async def sample_root() -> dict[str, str]:
     """Sample root endpoint - demonstrates basic FastAPI + ORJSON."""
     # Structured logging example
     logger.info(
@@ -52,7 +54,7 @@ async def sample_root():
 
 
 @router.get("/search")
-async def search(q: str, limit: int = 10):
+async def search(q: str, limit: int = 10) -> dict[str, Any]:
     """
     Searches the in-memory index using Tantivy (Rust).
     Demonstrates: Rust integration, in-memory indexing
@@ -64,7 +66,7 @@ async def search(q: str, limit: int = 10):
 
 
 @router.post("/render", response_class=HTMLResponse)
-async def render_html(stats: ProcessingStats):
+async def render_html(stats: ProcessingStats) -> Response:
     """
     Renders a report HTML using MiniJinja (Rust).
     Demonstrates: Template rendering with Rust-based MiniJinja
@@ -88,11 +90,12 @@ async def batch_processing(batch: BatchData) -> ProcessingStats:
     Process data batch with Polars + DuckDB.
     Demonstrates: Polars DataFrames, DuckDB in-memory analytics
     """
-    return await process_data_batch(batch.batch_id, batch.data)
+    data_dicts = [d.model_dump() for d in batch.data]
+    return await process_data_batch(batch.batch_id, data_dicts)
 
 
 @router.post("/batch-msgspec")
-async def batch_processing_msgspec(batch: BatchData = Body(...)):  # noqa: B008
+async def batch_processing_msgspec(batch: BatchData = Body(...)) -> dict[str, Any]:  # noqa: B008
     """
     Process data batch using msgspec internally (faster validation).
     Demonstrates: msgspec for 3-5x faster validation than Pydantic
@@ -108,16 +111,17 @@ async def batch_processing_msgspec(batch: BatchData = Body(...)):  # noqa: B008
 
 
 @router.post("/duckdb")
-async def duckdb_processing(batch: BatchData):
+async def duckdb_processing(batch: BatchData) -> dict[str, Any]:
     """
     Process data using DuckDB SQL.
     Demonstrates: DuckDB SQL engine for OLAP queries
     """
-    return await process_with_duckdb(batch.batch_id, batch.data)
+    data = [d.model_dump() for d in batch.data]
+    return await process_with_duckdb(batch.batch_id, data)
 
 
 @router.get("/duckdb-cached")
-async def duckdb_cached_endpoint(batch_id: str, size: int = 100):
+async def duckdb_cached_endpoint(batch_id: str, size: int = 100) -> dict[str, Any]:
     """
     DuckDB processing with Valkey caching (manual logic).
     Demonstrates: Valkey caching, xxhash cache keys, zstandard compression
@@ -127,17 +131,17 @@ async def duckdb_cached_endpoint(batch_id: str, size: int = 100):
 
 
 @router.get("/duckdb-cached-decorator")
-async def duckdb_decorator_endpoint(batch_id: str, size: int = 100):
+async def duckdb_decorator_endpoint(batch_id: str, size: int = 100) -> dict[str, Any]:
     """
     DuckDB processing with @valkey_cache decorator.
     Demonstrates: Decorator-based caching with Valkey
     """
     data = await generate_large_dataset(size)
-    return await get_batch_stats_with_decorator(batch_id, data)
+    return await get_batch_stats_with_decorator(batch_id, data)  # type: ignore[no-any-return]
 
 
 @router.get("/benchmark/{size}")
-async def benchmark_endpoint(size: int):
+async def benchmark_endpoint(size: int) -> dict[str, Any]:
     """
     Generate large dataset and benchmark serialization.
     Demonstrates: ORJSON serialization performance
@@ -154,7 +158,7 @@ async def benchmark_endpoint(size: int):
 
 
 @router.get("/large-json")
-async def large_json_response():
+async def large_json_response() -> dict[str, Any]:
     """
     Generate large JSON response to test serialization.
     Demonstrates: ORJSON performance with large payloads
@@ -169,7 +173,9 @@ async def large_json_response():
 
 
 @router.get("/pg/benchmark")
-async def benchmark_postgres_polars(user_id: int = 1, limit: int = 100, runs: int = 5):
+async def benchmark_postgres_polars(
+    user_id: int = 1, limit: int = 100, runs: int = 5
+) -> dict[str, Any]:
     """
     Benchmark 3 approaches for PostgreSQL data processing:
     1. Baseline: Pydantic + dict + for loop
@@ -182,7 +188,7 @@ async def benchmark_postgres_polars(user_id: int = 1, limit: int = 100, runs: in
 
 
 @router.get("/pg/benchmark-all")
-async def benchmark_all_postgres_approaches(user_id: int = 1, limit: int = 100):
+async def benchmark_all_postgres_approaches(user_id: int = 1, limit: int = 100) -> dict[str, Any]:
     """
     Benchmark ALL 4 approaches for PostgreSQL:
     1. Pydantic + dict/list (baseline)
@@ -198,7 +204,7 @@ async def benchmark_all_postgres_approaches(user_id: int = 1, limit: int = 100):
 
 
 @router.get("/pg/duckdb-compare")
-async def compare_analytics_engines():
+async def compare_analytics_engines() -> dict[str, Any]:
     """
     Compare PostgreSQL vs DuckDB analytics performance.
     Demonstrates: postgres_scanner extension, OLTP vs OLAP
@@ -211,7 +217,7 @@ async def compare_analytics_engines():
 @router.get("/iceberg/benchmark")
 async def benchmark_iceberg(
     s3_path: str = "s3://liquid-crystal-bucket-manoj/dumped-clustred-data/source_data_iceberg",
-):
+) -> list[IcebergBenchmarkResult]:
     """
     Run performance benchmarks on Iceberg table in S3.
     Demonstrates: DuckDB Iceberg extension, S3 integration, Clustered Query Performance
@@ -235,30 +241,30 @@ from src.samples.pg_pydantic_dict import (  # noqa: E402
 
 
 @router.post("/events", response_model=UserEventResponse)
-async def create_event(event: UserEvent):
+async def create_event(event: UserEvent) -> UserEventResponse:
     """Create a new user event."""
     return await create_event_endpoint(event)
 
 
 @router.get("/events/{user_id}", response_model=list[UserEventResponse])
-async def get_user_events(user_id: int, limit: int = 100):
+async def get_user_events(user_id: int, limit: int = 100) -> list[UserEventResponse]:
     """Get user events with pagination."""
     return await get_user_events_endpoint(user_id, limit)
 
 
 @router.post("/events/bulk")
-async def bulk_insert_events(count: int = 1000):
+async def bulk_insert_events(count: int = 1000) -> dict[str, Any]:
     """Bulk insert events for performance testing."""
     return await bulk_insert_events_endpoint(count)
 
 
 @router.get("/analytics/summary", response_model=AnalyticsSummary)
-async def get_analytics_summary():
+async def get_analytics_summary() -> AnalyticsSummary:
     """Get analytics summary (PostgreSQL aggregation)."""
     return await get_analytics_summary_endpoint()
 
 
 @router.get("/analytics/conversion-funnel", response_model=list[ConversionFunnel])
-async def get_conversion_funnel():
+async def get_conversion_funnel() -> list[ConversionFunnel]:
     """Get conversion funnel metrics."""
     return await get_conversion_funnel_endpoint()

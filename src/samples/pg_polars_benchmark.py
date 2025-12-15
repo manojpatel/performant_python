@@ -5,6 +5,7 @@ Compares dict/list manipulation vs Polars DataFrame processing.
 
 import json
 import time
+from typing import Any
 
 import polars as pl
 
@@ -12,7 +13,7 @@ from src.lib.postgres_client import get_postgres
 from src.samples.pydantic_models import UserEventResponse
 
 
-async def get_user_events_pydantic_baseline(user_id: int, limit: int = 100) -> dict:
+async def get_user_events_pydantic_baseline(user_id: int, limit: int = 100) -> dict[str, Any]:
     """Baseline: Current Pydantic + dict/list approach."""
     pg = get_postgres()
 
@@ -49,7 +50,7 @@ async def get_user_events_pydantic_baseline(user_id: int, limit: int = 100) -> d
     }
 
 
-async def get_user_events_pydantic_polars(user_id: int, limit: int = 100) -> dict:
+async def get_user_events_pydantic_polars(user_id: int, limit: int = 100) -> dict[str, Any]:
     """Optimized: Pydantic + Polars DataFrame - direct row loading."""
     pg = get_postgres()
 
@@ -90,7 +91,9 @@ async def get_user_events_pydantic_polars(user_id: int, limit: int = 100) -> dic
     return {"count": count, "total_time_ms": (t_end - t_start) * 1000, "method": "pydantic_polars"}
 
 
-async def benchmark_pydantic_approaches(user_id: int = 1, limit: int = 100, runs: int = 5) -> dict:
+async def benchmark_pydantic_approaches(
+    user_id: int = 1, limit: int = 100, runs: int = 5
+) -> dict[str, Any]:
     """
     Benchmark Pydantic baseline vs Pydantic + Polars vs msgspec + Polars.
     Runs multiple times and returns average timing.
@@ -152,7 +155,7 @@ async def benchmark_pydantic_approaches(user_id: int = 1, limit: int = 100, runs
     }
 
 
-async def get_user_events_msgspec_polars(user_id: int, limit: int = 100) -> dict:
+async def get_user_events_msgspec_polars(user_id: int, limit: int = 100) -> dict[str, Any]:
     """msgspec + Polars: Fastest - msgspec validation + vectorized Polars processing."""
 
     pg = get_postgres()

@@ -7,6 +7,7 @@ Tests cache HIT and MISS scenarios with timing measurements.
 import asyncio
 import json
 import time
+from typing import Any
 
 import httpx
 
@@ -14,7 +15,7 @@ BASE_URL = "http://localhost:8080"
 
 
 # Sample test payload
-def generate_test_payload(batch_id: str, size: int = 100):
+def generate_test_payload(batch_id: str, size: int = 100) -> dict[str, Any]:
     """Generate test data payload."""
     data = [
         {
@@ -30,7 +31,7 @@ def generate_test_payload(batch_id: str, size: int = 100):
     return {"batch_id": batch_id, "data": data}
 
 
-async def test_cache_miss():
+async def test_cache_miss() -> bool:
     """Test cache MISS scenario (first request)."""
     print("\n" + "=" * 80)
     print("TEST 1: Cache MISS (First Request)")
@@ -62,7 +63,7 @@ async def test_cache_miss():
             return False
 
 
-async def test_cache_hit():
+async def test_cache_hit() -> bool:
     """Test cache HIT scenario (second request with same batch_id)."""
     print("\n" + "=" * 80)
     print("TEST 2: Cache HIT (Second Request - Same batch_id)")
@@ -100,7 +101,7 @@ async def test_cache_hit():
             return False
 
 
-async def test_different_batch():
+async def test_different_batch() -> bool:
     """Test with a different batch_id (should be cache MISS)."""
     print("\n" + "=" * 80)
     print("TEST 3: Different Batch (Should be Cache MISS)")
@@ -112,7 +113,6 @@ async def test_different_batch():
         response = await client.get(
             f"{BASE_URL}/samples/duckdb-cached?batch_id={payload['batch_id']}&size={len(payload['data'])}"
         )
-
 
         if response.status_code == 200:
             result = response.json()
@@ -128,7 +128,7 @@ async def test_different_batch():
             return False
 
 
-async def main():
+async def main() -> None:
     print("\n🧪 Valkey Cache Testing Suite")
     print("📌 Testing Valkey LRU Cache → DuckDB Fallback Pattern\n")
 

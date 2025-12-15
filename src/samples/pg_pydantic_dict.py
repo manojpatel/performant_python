@@ -4,6 +4,7 @@ Demonstrates asyncpg performance and connection pooling.
 """
 
 import time
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -22,8 +23,6 @@ async def create_event_endpoint(event: UserEvent) -> UserEventResponse:
 
     pg = get_postgres()
 
-
-
     row = await pg.fetchrow(
         """
         INSERT INTO user_events (user_id, event_type, page_url, metadata)
@@ -35,6 +34,9 @@ async def create_event_endpoint(event: UserEvent) -> UserEventResponse:
         event.page_url,
         json.dumps(event.metadata),  # Convert dict to JSON string
     )
+
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to insert event")
 
     # Parse the returned JSONB field back to dict
     event_data = dict(row)
@@ -102,6 +104,16 @@ async def get_analytics_summary_endpoint() -> AnalyticsSummary:
         """
     )
 
+    if not row:
+        row = {
+            "total_events": 0,
+            "unique_users": 0,
+            "page_views": 0,
+            "clicks": 0,
+            "conversions": 0,
+            "avg_duration": 0,
+        }
+
     t1 = time.perf_counter()
 
     events_by_type = {
@@ -148,7 +160,7 @@ async def get_conversion_funnel_endpoint() -> list[ConversionFunnel]:
     return [ConversionFunnel(**dict(row)) for row in rows]
 
 
-async def bulk_insert_events_endpoint(count: int = 1000) -> dict:
+async def bulk_insert_events_endpoint(count: int = 1000) -> dict[str, Any]:
     """Bulk insert events for performance testing."""
     import json
     import random
@@ -174,7 +186,7 @@ async def bulk_insert_events_endpoint(count: int = 1000) -> dict:
     t0 = time.perf_counter()
 
     # Use executemany for batch insert
-    await pg._pool.executemany(
+    await pg.executemany(
         "INSERT INTO user_events (user_id, event_type, page_url, metadata) VALUES ($1, $2, $3, $4)",
         events,
     )

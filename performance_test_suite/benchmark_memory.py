@@ -3,7 +3,6 @@ Memory profiling benchmark for different validation approaches.
 """
 
 import asyncio
-import os
 import sys
 import tracemalloc
 from pathlib import Path
@@ -20,7 +19,7 @@ from src.samples.msgspec_models import UserEventResponseMsg
 from src.samples.pydantic_models import UserEventResponse
 
 
-async def measure_pydantic_memory():
+async def measure_pydantic_memory() -> tuple[float, int]:
     """Measure memory usage for Pydantic validation."""
     pg = get_postgres()
 
@@ -50,7 +49,7 @@ async def measure_pydantic_memory():
     return total_memory, len(events)
 
 
-async def measure_msgspec_memory():
+async def measure_msgspec_memory() -> tuple[float, int]:
     """Measure memory usage for msgspec validation."""
     pg = get_postgres()
 
@@ -81,7 +80,7 @@ async def measure_msgspec_memory():
     return total_memory, len(events)
 
 
-async def measure_polars_memory():
+async def measure_polars_memory() -> tuple[float, int]:
     """Measure memory usage for Polars + msgspec."""
     pg = get_postgres()
 
@@ -109,7 +108,7 @@ async def measure_polars_memory():
     return total_memory, len(events)
 
 
-async def main():
+async def main() -> None:
     print("=" * 70)
     print("MEMORY USAGE BENCHMARKS (100 records)")
     print("=" * 70)

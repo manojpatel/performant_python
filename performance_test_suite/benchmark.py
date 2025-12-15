@@ -2,7 +2,9 @@ import asyncio
 import json
 import random
 import time
+import traceback
 from statistics import mean
+from typing import Any
 
 import httpx
 
@@ -12,17 +14,15 @@ BATCH_SIZE = 5000  # Records per request
 NUM_REQUESTS = 50  # Total requests per endpoint
 CONCURRENCY = 5  # Concurrent requests
 
-import traceback
 
-
-def generate_payload(batch_id: str, size: int):
+def generate_payload(batch_id: str, size: int) -> dict[str, Any]:
     """Generates a payload compatible with all endpoints"""
     data = [
         {
             "id": i,
             "timestamp": time.time(),
-            "category": random.choice(["A", "B", "C", "D", "E"]),
-            "value": random.uniform(0, 1000),
+            "category": random.choice(["A", "B", "C", "D", "E"]),  # nosec B311
+            "value": random.uniform(0, 1000),  # nosec B311
             "tags": ["test"],
         }
         for i in range(size)
@@ -30,7 +30,7 @@ def generate_payload(batch_id: str, size: int):
     return {"batch_id": batch_id, "data": data}
 
 
-async def fetch(client, url, payload):
+async def fetch(client: httpx.AsyncClient, url: str, payload: dict[str, Any]) -> float:
     start = time.perf_counter()
     resp = await client.post(url, json=payload)
     end = time.perf_counter()
@@ -38,7 +38,7 @@ async def fetch(client, url, payload):
     return (end - start) * 1000  # ms
 
 
-async def benchmark_endpoint(name: str, endpoint: str, payload: dict):
+async def benchmark_endpoint(name: str, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
     print(f"Benchmarking {name} ({endpoint})...")
     timings = []
 
@@ -68,7 +68,7 @@ async def benchmark_endpoint(name: str, endpoint: str, payload: dict):
     }
 
 
-async def main():
+async def main() -> None:
     print(f"Generating payload with {BATCH_SIZE} records...")
     payload = generate_payload("bench-1", BATCH_SIZE)
     payload_size_mb = len(json.dumps(payload)) / 1024 / 1024

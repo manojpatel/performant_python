@@ -11,6 +11,7 @@ Provides:
 
 import logging
 import sys
+from typing import Any
 
 import structlog
 from opentelemetry import trace
@@ -28,8 +29,6 @@ def add_open_telemetry_spans(
         ctx = span.get_span_context()
         event_dict["trace_id"] = format(ctx.trace_id, "032x")
         event_dict["span_id"] = format(ctx.span_id, "016x")
-    return event_dict
-
     return event_dict
 
 
@@ -61,7 +60,7 @@ def add_app_context(logger: WrappedLogger, method_name: str, event_dict: EventDi
     return event_dict
 
 
-def configure_structlog(json_logs: bool = None) -> None:
+def configure_structlog(json_logs: bool | None = None) -> None:
     """
     Configure structlog for the application.
 
@@ -81,7 +80,7 @@ def configure_structlog(json_logs: bool = None) -> None:
     )
 
     # Common processors for all configurations
-    processors = [
+    processors: list[Any] = [
         # Add log level
         structlog.stdlib.add_log_level,
         # Add timestamp
@@ -130,7 +129,7 @@ def configure_structlog(json_logs: bool = None) -> None:
     )
 
 
-def get_logger(name: str = None) -> structlog.stdlib.BoundLogger:
+def get_logger(name: str | None = None) -> Any:
     """
     Get a structured logger instance.
 

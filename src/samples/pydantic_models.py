@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -59,7 +60,7 @@ class UserEvent(BaseModel):
     user_id: int = Field(..., gt=0, description="User ID")
     event_type: str = Field(..., pattern=r"^(page_view|click|conversion)$")
     page_url: str = Field(..., min_length=1, description="Page URL")
-    metadata: dict = Field(default_factory=dict, description="Additional event data")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional event data")
 
 
 class UserEventResponse(UserEvent):
@@ -104,5 +105,5 @@ class IcebergBenchmarkResult(BaseModel):
 
     test_name: str
     duration_ms: float
-    result_summary: dict
+    result_summary: dict[str, Any]
     scanned_record_count: int | None = None

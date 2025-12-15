@@ -3,14 +3,13 @@ Benchmark script to test JSON serialization and compression performance.
 """
 
 import json
-import os
 import sys
 import time
+from pathlib import Path
 
 import msgspec
 import orjson
 import zstandard as zstd
-from pathlib import Path
 
 # Add src to path
 sys.path.append(str(Path.cwd()))
@@ -40,10 +39,10 @@ print("=" * 70)
 # Test 1: stdlib json
 t0 = time.perf_counter()
 for _ in range(100):
-    result = json.dumps(records)
+    json_result = json.dumps(records)
 t1 = time.perf_counter()
 json_time = (t1 - t0) * 10  # ms per 1000 records
-json_size = len(result.encode())
+json_size = len(json_result.encode())
 
 print("\n1. Standard Library json.dumps():")
 print(f"   Time: {json_time:.2f}ms")
@@ -52,10 +51,10 @@ print(f"   Size: {json_size:,} bytes")
 # Test 2: orjson
 t0 = time.perf_counter()
 for _ in range(100):
-    result = orjson.dumps(records)
+    orjson_result = orjson.dumps(records)
 t1 = time.perf_counter()
 orjson_time = (t1 - t0) * 10
-orjson_size = len(result)
+orjson_size = len(orjson_result)
 
 print("\n2. orjson.dumps():")
 print(f"   Time: {orjson_time:.2f}ms")
@@ -66,10 +65,10 @@ print(f"   Speedup: {json_time / orjson_time:.2f}x faster")
 encoder = msgspec.json.Encoder()
 t0 = time.perf_counter()
 for _ in range(100):
-    result = encoder.encode(records)
+    msgspec_result = encoder.encode(records)
 t1 = time.perf_counter()
 msgspec_time = (t1 - t0) * 10
-msgspec_size = len(result)
+msgspec_size = len(msgspec_result)
 
 print("\n3. msgspec.json.Encoder():")
 print(f"   Time: {msgspec_time:.2f}ms")

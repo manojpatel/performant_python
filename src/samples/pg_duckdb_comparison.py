@@ -4,6 +4,7 @@ Uses DuckDB to query PostgreSQL data via postgres_scanner extension.
 """
 
 import time
+from typing import Any
 
 from src.lib.duckdb_client import get_pool
 from src.samples.pydantic_models import AnalyticsSummary
@@ -50,13 +51,16 @@ async def get_analytics_via_duckdb() -> AnalyticsSummary:
             FROM pg_db.public.user_events
         """).fetchone()
 
+        if not result:
+            raise ValueError("Query returned no results")
+
         t1 = time.perf_counter()
 
         events_by_type = {"page_view": result[2], "click": result[3], "conversion": result[4]}
 
         return AnalyticsSummary(
-            total_events=result[0],
-            unique_users=result[1],
+            total_events=result[0] or 0,
+            unique_users=result[1] or 0,
             events_by_type=events_by_type,
             avg_duration_seconds=float(result[5] or 0),
             query_time_ms=(t1 - t0) * 1000,
@@ -66,7 +70,7 @@ async def get_analytics_via_duckdb() -> AnalyticsSummary:
         pool._return_connection(conn)
 
 
-async def compare_engines_analytics() -> dict:
+async def compare_engines_analytics() -> dict[str, Any]:
     """
     Run analytics query on both PostgreSQL and DuckDB and compare performance.
 

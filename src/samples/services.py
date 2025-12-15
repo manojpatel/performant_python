@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 import polars as pl
 from opentelemetry import trace
@@ -42,8 +42,8 @@ def _process_data_batch_sync(batch_id: str, raw_data: list[dict[str, Any]]) -> P
     return ProcessingStats(
         batch_id=batch_id,
         total_records=count,
-        mean_value=mean_val,
-        max_value=max_val,
+        mean_value=cast(float, mean_val or 0.0),
+        max_value=cast(float, max_val or 0.0),
         by_category=by_category,
     )
 
@@ -79,22 +79,27 @@ def _process_with_duckdb_sync(batch_id: str, raw_data: list[dict[str, Any]]) -> 
             global_stats = conn.execute(
                 "SELECT COUNT(*), AVG(value), MAX(value) FROM df_arrow"
             ).fetchone()
-        total_records, mean_value, max_value = global_stats
+
+        if not global_stats:
+            total_records, mean_value, max_value = 0, 0.0, 0.0
+        else:
+            total_records, mean_value, max_value = global_stats
 
         with tracer.start_as_current_span("duckdb_query_groupby"):
             cat_stats = conn.execute(
-                "SELECT category, AVG(value) "
-                "FROM df_arrow "
-                "GROUP BY category "
-                "ORDER BY category"
+                "SELECT category, AVG(value) FROM df_arrow GROUP BY category ORDER BY category"
             ).fetchall()
+
+        if not cat_stats:
+            cat_stats = []
+
         by_category = {row[0]: row[1] for row in cat_stats}
 
         return {
             "batch_id": batch_id,
             "total_records": total_records,
-            "mean_value": mean_value,
-            "max_value": max_value,
+            "mean_value": mean_value or 0.0,  # noqa: FURB143
+            "max_value": max_value or 0.0,  # noqa: FURB143
             "by_category": by_category,
         }
     finally:

@@ -8,9 +8,9 @@ import duckdb
 import psutil
 
 
-def get_memory_mb():
+def get_memory_mb() -> float:
     process = psutil.Process(os.getpid())
-    return process.memory_info().rss / 1024 / 1024
+    return float(process.memory_info().rss / 1024 / 1024)
 
 
 DB_PATH = "concurrency_test.db"
@@ -22,7 +22,7 @@ QUERY = (
 )
 
 
-def setup_db():
+def setup_db() -> None:
     if Path(DB_PATH).exists():
         Path(DB_PATH).unlink()
 
@@ -44,7 +44,7 @@ def setup_db():
     con.close()
 
 
-def monitor_memory(stop_event, peak_container):
+def monitor_memory(stop_event: threading.Event, peak_container: list[float]) -> None:
     while not stop_event.is_set():
         current = get_memory_mb()
         if current > peak_container[0]:
@@ -52,7 +52,7 @@ def monitor_memory(stop_event, peak_container):
         time.sleep(0.05)
 
 
-def run_single_connection_shared(num_queries):
+def run_single_connection_shared(num_queries: int) -> None:
     print(f"\n--- Scenario A: Single Connection Shared by {num_queries} Threads ---")
 
     stop_event = threading.Event()
@@ -62,7 +62,7 @@ def run_single_connection_shared(num_queries):
 
     con = duckdb.connect(DB_PATH, read_only=True)
 
-    def worker():
+    def worker() -> float:
         # Use a cursor for each thread to ensure isolation if connection is shared
         cursor = con.cursor()
         start_t = time.time()
@@ -87,7 +87,7 @@ def run_single_connection_shared(num_queries):
     con.close()
 
 
-def run_connection_per_thread(num_queries):
+def run_connection_per_thread(num_queries: int) -> None:
     print(f"\n--- Scenario B: Connection Per Thread (Pool) ({num_queries} Threads) ---")
 
     stop_event = threading.Event()
@@ -95,7 +95,7 @@ def run_connection_per_thread(num_queries):
     mem_thread = threading.Thread(target=monitor_memory, args=(stop_event, peak_mem))
     mem_thread.start()
 
-    def worker():
+    def worker() -> float:
         # Each thread gets its own connection
         local_con = duckdb.connect(DB_PATH, read_only=True)
         start_t = time.time()
@@ -119,7 +119,7 @@ def run_connection_per_thread(num_queries):
     print(f"Peak Memory: {peak_mem[0]:.2f} MB")
 
 
-def main():
+def main() -> None:
     setup_db()
 
     print(f"Initial Memory: {get_memory_mb():.2f} MB")

@@ -1,5 +1,6 @@
 import time
 from functools import lru_cache
+from typing import Any, cast
 
 import tantivy
 from minijinja import Environment
@@ -33,18 +34,18 @@ jinja_env.add_template(
 
 
 @tracer.start_as_current_span("render_report")
-def render_report(context: dict) -> str:
+def render_report(context: dict[str, Any]) -> str:
     """
     Renders a template using MiniJinja (Rust).
     """
-    return jinja_env.render_template("report.html", **context)
+    return jinja_env.render_template("report.html", **context)  # type: ignore[no-any-return]
 
 
 # --- Tantivy Setup (Search) ---
 class SearchEngine:
     _instance = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         # We create an in-memory index for demonstration
         schema_builder = tantivy.SchemaBuilder()
         schema_builder.add_text_field("title", stored=True)
@@ -57,13 +58,13 @@ class SearchEngine:
         self.writer = self.index.writer()
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls) -> "SearchEngine":
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
 
     @tracer.start_as_current_span("tantivy_seed")
-    def seed(self, size: int = 10000):
+    def seed(self, size: int = 10000) -> None:
         """
         Seeds the Tantivy index with dummy documents.
         """
@@ -92,7 +93,7 @@ class SearchEngine:
 
     @lru_cache(maxsize=256)  # noqa: B019
     @tracer.start_as_current_span("search")
-    def search(self, query: str, limit: int = 10) -> list:
+    def search(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
         """
         Searches the index using Tantivy (Rust).
         Cached for performance - repeated searches return instantly.
@@ -107,11 +108,13 @@ class SearchEngine:
         results = []
         for _, doc_address in top_docs:
             retrieved_doc = searcher.doc(doc_address)
+            # Cast to dict behavior or Any to bypass MyPy checks on native object
+            doc_any = cast(Any, retrieved_doc)
             results.append(
                 {
-                    "id": retrieved_doc["id"][0],
-                    "title": retrieved_doc.get("title", [""])[0],
-                    "body": retrieved_doc.get("body", [""])[0][:200],  # truncate
+                    "id": doc_any["id"][0],
+                    "title": doc_any.get("title", [""])[0],
+                    "body": doc_any.get("body", [""])[0][:200],  # truncate
                 }
             )
 

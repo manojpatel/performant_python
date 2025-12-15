@@ -5,6 +5,7 @@ Only initialized when ENABLE_TRACING=true.
 
 import os
 
+from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -17,7 +18,7 @@ from src.lib.logger import get_logger
 logger = get_logger(__name__)
 
 
-def init_tracing():
+def init_tracing() -> bool:
     """Initialize OpenTelemetry tracing if ENABLE_TRACING is true."""
     if os.getenv("ENABLE_TRACING", "false").lower() != "true":
         logger.info("tracing_disabled", message="Skipping OpenTelemetry initialization")
@@ -51,7 +52,7 @@ def init_tracing():
     return True
 
 
-def instrument_fastapi(app):
+def instrument_fastapi(app: FastAPI) -> None:
     """Instrument FastAPI app if tracing is enabled."""
     if os.getenv("ENABLE_TRACING", "false").lower() == "true":
         FastAPIInstrumentor.instrument_app(app)

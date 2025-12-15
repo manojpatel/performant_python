@@ -5,6 +5,7 @@ Demonstrates performance improvements over Pydantic + dict/list.
 
 import json
 import time
+from typing import Any
 
 import msgspec
 import polars as pl
@@ -13,7 +14,7 @@ from src.lib.postgres_client import get_postgres
 from src.samples.msgspec_models import UserEventResponseMsg
 
 
-async def get_user_events_msgspec(user_id: int, limit: int = 100) -> dict:
+async def get_user_events_msgspec(user_id: int, limit: int = 100) -> dict[str, Any]:
     """
     Get user events with msgspec validation (3-5x faster than Pydantic).
     """
@@ -57,7 +58,7 @@ async def get_user_events_msgspec(user_id: int, limit: int = 100) -> dict:
     }
 
 
-async def get_user_events_polars(user_id: int, limit: int = 100) -> dict:
+async def get_user_events_polars(user_id: int, limit: int = 100) -> dict[str, Any]:
     """
     Get user events with Polars DataFrame processing.
     """
@@ -106,7 +107,7 @@ async def get_user_events_polars(user_id: int, limit: int = 100) -> dict:
     }
 
 
-async def get_user_events_msgspec_polars(user_id: int, limit: int = 100) -> dict:
+async def get_user_events_msgspec_polars(user_id: int, limit: int = 100) -> dict[str, Any]:
     """
     Get user events with Polars + msgspec (combined optimization).
     """
@@ -139,8 +140,8 @@ async def get_user_events_msgspec_polars(user_id: int, limit: int = 100) -> dict
         )
 
         # msgspec validation (3-5x faster than Pydantic)
-        events = [UserEventResponseMsg(**row) for row in df.to_dicts()]
-        events = [msgspec.structs.asdict(e) for e in events]
+        event_objs = [UserEventResponseMsg(**row) for row in df.to_dicts()]
+        events = [msgspec.structs.asdict(e) for e in event_objs]
     else:
         events = []
     t_parse_end = time.perf_counter()
@@ -155,7 +156,7 @@ async def get_user_events_msgspec_polars(user_id: int, limit: int = 100) -> dict
     }
 
 
-async def benchmark_all_approaches(user_id: int = 1, limit: int = 100) -> dict:
+async def benchmark_all_approaches(user_id: int = 1, limit: int = 100) -> dict[str, Any]:
     """
     Benchmark all 4 approaches and return comparison.
     """

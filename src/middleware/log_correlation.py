@@ -1,12 +1,14 @@
 import uuid
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette.responses import Response
 
 # ContextVar to store the request ID for valid access across async context
 # Defaults to None
-request_id_ctx: ContextVar[str] = ContextVar("request_id", default=None)
+request_id_ctx: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
@@ -19,7 +21,9 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     4. Adds it to the response headers.
     """
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         # 1. Get or generate ID
         req_id = request.headers.get("X-Request-ID")
         if not req_id:

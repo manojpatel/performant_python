@@ -4,8 +4,10 @@ Thread-safe connection pooling to avoid recreating connections.
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from queue import Empty, Queue
+from typing import Any
 
 import duckdb
 
@@ -17,14 +19,19 @@ logger = get_logger(__name__)
 class DuckDBConnectionPool:
     """Thread-safe DuckDB connection pool."""
 
-    def __init__(self, database: str = ":memory:", pool_size: int = 4, config: dict = {}):
+    def __init__(
+        self,
+        database: str = ":memory:",
+        pool_size: int = 4,
+        config: dict[str, Any] | None = None,
+    ):
         self.database = database
         self.pool_size = pool_size
-        self.config = config
-        self._pool: Queue = Queue(maxsize=pool_size)
+        self.config = config or {}
+        self._pool: Queue[duckdb.DuckDBPyConnection] = Queue(maxsize=pool_size)
         self._initialize_pool()
 
-    def _initialize_pool(self):
+    def _initialize_pool(self) -> None:
         """Create initial pool of connections."""
         import os
 
@@ -56,12 +63,12 @@ class DuckDBConnectionPool:
         except Empty:
             raise RuntimeError("Connection pool exhausted - no connections available") from None
 
-    def _return_connection(self, conn: duckdb.DuckDBPyConnection):
+    def _return_connection(self, conn: duckdb.DuckDBPyConnection) -> None:
         """Return a connection to the pool."""
         self._pool.put(conn)
 
     @asynccontextmanager
-    async def connection(self):
+    async def connection(self) -> AsyncGenerator[duckdb.DuckDBPyConnection, None]:
         """
         Async context manager for getting a pooled connection.
 
@@ -75,7 +82,7 @@ class DuckDBConnectionPool:
         finally:
             await asyncio.to_thread(self._return_connection, conn)
 
-    def close_all(self):
+    def close_all(self) -> None:
         """Close all connections in the pool."""
         while not self._pool.empty():
             try:
@@ -100,7 +107,7 @@ def get_pool() -> DuckDBConnectionPool:
 
 
 def init_pool(
-    database: str = ":memory:", pool_size: int = 4, config: dict = None
+    database: str = ":memory:", pool_size: int = 4, config: dict[str, Any] | None = None
 ) -> DuckDBConnectionPool:
     """
     Initialize the global DuckDB connection pool.

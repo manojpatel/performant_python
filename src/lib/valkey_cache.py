@@ -33,7 +33,7 @@ class ValkeyCache:
         self.url = url
         self._pool: valkey.Valkey | None = None
 
-    async def init_pool(self):
+    async def init_pool(self) -> None:
         """Initialize Valkey connection pool."""
         self._pool = valkey.Valkey.from_url(
             self.url,
@@ -44,18 +44,19 @@ class ValkeyCache:
             socket_timeout=5,
         )
         # Test connection
-        try:
-            await self._pool.ping()
-            logger.info("valkey_connected", url=self.url, max_connections=10)
-        except Exception as e:
-            logger.warning(
-                "valkey_connection_failed",
-                url=self.url,
-                error=str(e),
-                message="Cache will be disabled",
-            )
+        if self._pool:
+            try:
+                await self._pool.ping()
+                logger.info("valkey_connected", url=self.url, max_connections=10)
+            except Exception as e:
+                logger.warning(
+                    "valkey_connection_failed",
+                    url=self.url,
+                    error=str(e),
+                    message="Cache will be disabled",
+                )
 
-    async def close(self):
+    async def close(self) -> None:
         """Close Valkey connection pool."""
         if self._pool:
             await self._pool.close()
@@ -75,7 +76,7 @@ class ValkeyCache:
             logger.error("valkey_get_error", key=key, error=str(e), exc_info=True)
             return None
 
-    async def set(self, key: str, value: Any, ttl: int = 300):
+    async def set(self, key: str, value: Any, ttl: int = 300) -> None:
         """Set value in cache with TTL (seconds)."""
         if not self._pool:
             return
@@ -87,7 +88,7 @@ class ValkeyCache:
         except Exception as e:
             logger.error("valkey_set_error", key=key, ttl=ttl, error=str(e), exc_info=True)
 
-    async def delete(self, key: str):
+    async def delete(self, key: str) -> None:
         """Delete key from cache."""
         if not self._pool:
             return
@@ -120,7 +121,7 @@ async def init_valkey_cache(url: str | None = None) -> ValkeyCache:
     return _valkey_cache
 
 
-def generate_cache_key(prefix: str, *args, **kwargs) -> str:
+def generate_cache_key(prefix: str, *args: Any, **kwargs: Any) -> str:
     """
     Generate a deterministic cache key from function arguments.
     Uses xxhash for ultra-fast non-cryptographic hashing.
@@ -145,7 +146,9 @@ def generate_cache_key(prefix: str, *args, **kwargs) -> str:
     return f"{prefix}:{key_hash}"
 
 
-def valkey_cache(ttl: int = 300, key_prefix: str | None = None):
+def valkey_cache(
+    ttl: int = 300, key_prefix: str | None = None
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Generic Valkey cache decorator with timing instrumentation.
 
@@ -175,9 +178,9 @@ def valkey_cache(ttl: int = 300, key_prefix: str | None = None):
             - source: "valkey" or function source
     """
 
-    def decorator(func: Callable):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
             cache = get_valkey_cache()
             prefix = key_prefix or func.__name__
 

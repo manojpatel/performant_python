@@ -15,7 +15,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-async def main():
+async def main() -> None:
     print("Checking S3 connectivity via Iceberg...")
 
     # Check env vars

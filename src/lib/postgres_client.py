@@ -34,7 +34,7 @@ class PostgresPool:
         self.url = url
         self._pool: asyncpg.Pool | None = None
 
-    async def init_pool(self, min_size: int = 5, max_size: int = 20):
+    async def init_pool(self, min_size: int = 5, max_size: int = 20) -> None:
         """
         Initialize asyncpg connection pool.
 
@@ -56,6 +56,8 @@ class PostgresPool:
                 )
 
                 # Test connection
+                if self._pool is None:
+                    continue
                 async with self._pool.acquire() as conn:
                     version = await conn.fetchval("SELECT version()")
                     logger.info(
@@ -91,13 +93,13 @@ class PostgresPool:
                         exc_info=True,
                     )
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the connection pool."""
         if self._pool:
             await self._pool.close()
             logger.info("postgres_pool_closed")
 
-    async def execute(self, query: str, *args) -> str:
+    async def execute(self, query: str, *args: Any) -> str:
         """
         Execute a query that doesn't return results (INSERT, UPDATE, DELETE).
 
@@ -109,9 +111,9 @@ class PostgresPool:
 
         with tracer.start_as_current_span("postgres_execute"):
             async with self._pool.acquire() as conn:
-                return await conn.execute(query, *args)
+                return await conn.execute(query, *args)  # type: ignore[no-any-return]
 
-    async def fetch(self, query: str, *args) -> list[asyncpg.Record]:
+    async def fetch(self, query: str, *args: Any) -> list[asyncpg.Record]:
         """
         Fetch multiple rows.
 
@@ -123,9 +125,9 @@ class PostgresPool:
 
         with tracer.start_as_current_span("postgres_fetch"):
             async with self._pool.acquire() as conn:
-                return await conn.fetch(query, *args)
+                return await conn.fetch(query, *args)  # type: ignore[no-any-return]
 
-    async def fetchrow(self, query: str, *args) -> asyncpg.Record | None:
+    async def fetchrow(self, query: str, *args: Any) -> asyncpg.Record | None:
         """Fetch a single row."""
         if not self._pool:
             raise RuntimeError("PostgreSQL pool not initialized")
@@ -134,7 +136,7 @@ class PostgresPool:
             async with self._pool.acquire() as conn:
                 return await conn.fetchrow(query, *args)
 
-    async def fetchval(self, query: str, *args) -> Any:
+    async def fetchval(self, query: str, *args: Any) -> Any:
         """Fetch a single value."""
         if not self._pool:
             raise RuntimeError("PostgreSQL pool not initialized")
@@ -142,6 +144,17 @@ class PostgresPool:
         with tracer.start_as_current_span("postgres_fetchval"):
             async with self._pool.acquire() as conn:
                 return await conn.fetchval(query, *args)
+
+    async def executemany(self, query: str, args: list[Any]) -> None:
+        """
+        Execute a query for multiple sets of arguments.
+        """
+        if not self._pool:
+            raise RuntimeError("PostgreSQL pool not initialized")
+
+        with tracer.start_as_current_span("postgres_executemany"):
+            async with self._pool.acquire() as conn:
+                await conn.executemany(query, args)
 
 
 # Global PostgreSQL connection pool instance

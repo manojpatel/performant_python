@@ -181,7 +181,20 @@ uv run performance_test_suite/benchmark_json_compression.py
 ```
 
 ### 4. Code Quality & Security (New)
-Run these tools regularly to ensure high standards:
+Run the consolidated pre-commit script to ensure high standards:
+
+```bash
+# Run all checks (Ruff, MyPy, Refurb, Bandit default)
+./pre_commit_check.sh
+
+# Run all checks + Full Bandit scan (all folders)
+./pre_commit_check.sh --bandit-all
+
+# Run checks + Bandit on specific target
+./pre_commit_check.sh --bandit-folders performance_test_suite/
+```
+
+Or run tools individually:
 
 ```bash
 # Static Type Checking (finds bugs)

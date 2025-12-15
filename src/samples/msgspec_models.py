@@ -1,3 +1,5 @@
+from typing import Any
+
 import msgspec
 
 
@@ -48,7 +50,7 @@ class UserEventMsg(msgspec.Struct):
     user_id: int
     event_type: str
     page_url: str
-    metadata: dict
+    metadata: dict[str, Any]
 
 
 class UserEventResponseMsg(msgspec.Struct):
@@ -58,7 +60,7 @@ class UserEventResponseMsg(msgspec.Struct):
     user_id: int
     event_type: str
     page_url: str
-    metadata: dict
+    metadata: dict[str, Any]
     created_at: str  # ISO format datetime string
 
 
@@ -80,5 +82,5 @@ class IcebergBenchmarkResult(msgspec.Struct):
 
     test_name: str
     duration_ms: float
-    result_summary: dict
+    result_summary: dict[str, Any]
     scanned_record_count: int = 0

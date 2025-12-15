@@ -1,5 +1,4 @@
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path
@@ -12,7 +11,7 @@ from src.lib.iceberg_utils import get_latest_metadata_file
 from src.lib.valkey_cache import init_valkey_cache
 
 
-async def run_join_demo():
+async def run_join_demo() -> None:
     print("Initializing resources...")
     init_pool()
     await init_valkey_cache()
@@ -61,7 +60,7 @@ async def run_join_demo():
             WHERE f.ARDV = '2026-05-31'  -- Filter partition for speed
             GROUP BY d.country_name, d.region
             ORDER BY transaction_count DESC
-        """
+        """  # nosec B608
 
         t0 = time.perf_counter()
         await asyncio.to_thread(conn.execute, query)
@@ -92,7 +91,7 @@ async def run_join_demo():
           AND b.SHOP_CAR_TYPE_CD = 'XXAR'
         GROUP BY a.POS_CD
         LIMIT 5
-    """
+    """  # nosec B608
 
     t0 = time.perf_counter()
     async with pool.connection() as conn:
