@@ -207,8 +207,9 @@ def setup_openfga_rules(admin_token: str, user_id: str) -> bool:
     }
 
     # Read OpenFGA Store ID
-    if os.path.exists("openfga_store.id"):
-        with open("openfga_store.id") as f:
+    store_file = "auth-gateway/setup-scripts/openfga_store.id"
+    if os.path.exists(store_file):
+        with open(store_file) as f:
             store_id = f.read().strip()
     else:
         # Fallback for dev/manual setup

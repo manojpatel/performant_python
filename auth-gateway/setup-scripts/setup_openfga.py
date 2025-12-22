@@ -276,8 +276,10 @@ def main() -> None:
     print("\n--- Setup Complete ---")
     print(f"OPENFGA_STORE_ID={store_id}")
 
-    # Write to a file for easy reading
-    with open("openfga_store.id", "w") as f:
+    # Write to a file in the same directory as the script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    store_file = os.path.join(script_dir, "openfga_store.id")
+    with open(store_file, "w") as f:
         f.write(store_id)
 
 

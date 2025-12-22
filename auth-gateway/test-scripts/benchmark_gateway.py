@@ -132,7 +132,7 @@ if __name__ == "__main__":
         with open("test_token.txt") as f:
             token = f.read().strip()
     else:
-        print("❌ No token found! Run: python3 scripts/get_access_token.py")
+        print("❌ No token found! Run: python3 auth-gateway/setup-scripts/get_access_token.py")
         exit(1)
 
     benchmark = GatewayBenchmark("http://localhost:3000", token)
