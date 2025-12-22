@@ -1,0 +1,20 @@
+name: Verification Tests
+model_file: ./verification_model.fga
+
+tuples:
+  - user: user:alice
+    relation: assignee
+    object: role:viewer
+
+  - user: role:viewer#assignee
+    relation: viewer
+    object: feature:dashboard
+
+tests:
+  - name: Viewer role should view but not edit
+    check:
+      - user: user:alice
+        object: feature:dashboard
+        assertions:
+          view: true
+          edit: false

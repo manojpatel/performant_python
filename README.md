@@ -416,3 +416,35 @@ If Tracing is **DISABLED** (or sampled out):
 *   **Request ID**: A unique `request_id` (UUID) is automatically generated for every request.
 *   **Persistence**: This ID is present in **every log line** (`"request_id": "..."`).
 *   **Usage**: Copy the `request_id` from one log and grep for it to see the full request history.
+
+## 🔒 Authorization (OpenFGA)
+
+This project uses [OpenFGA](https://openfga.dev) for fine-grained authorization. We provide scripts to manage the lifecycle of authorization models safely.
+
+### 1. Setup (Bootstrap)
+Initialize the OpenFGA store and model from a fresh state. This guarantees the environment matches your model file.
+
+```bash
+# Bootstrap the store
+python3 auth-gateway/setup-scripts/setup_openfga.py \
+  --model auth-gateway/openfga/model.fga \
+  --tests auth-gateway/openfga/tests.fga.yaml \
+  --tuples auth-gateway/openfga/seed_tuples.yaml
+```
+
+### 2. Update Model (Safe Migration)
+Safely update an existing OpenFGA store. This script **validates** your new model against a suite of compatibility tests *before* applying changes.
+
+```bash
+# Update the model
+python3 auth-gateway/setup-scripts/update_openfga_model.py \
+  --model auth-gateway/openfga/model.fga \
+  --tests auth-gateway/openfga/tests.fga.yaml
+```
+
+**Safety Mechanism**: 
+The update script will **abort** if the new model fails any of the tests defined in `tests.fga.yaml`. This prevents backward-incompatible changes from being deployed.
+
+### 3. Utility Scripts
+- **Get Access Token**: `python3 auth-gateway/setup-scripts/get_access_token.py` - Fetches a token for testing.
+```

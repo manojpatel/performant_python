@@ -1,0 +1,8 @@
+target/
+test-scripts/
+docs/
+openfga/
+benchmark_gateway.py
+debug_env.py
+*.log
+tmp_*.rs

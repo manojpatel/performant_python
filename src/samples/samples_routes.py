@@ -12,11 +12,11 @@ from fastapi.responses import HTMLResponse, Response
 
 from src.lib.logger import get_logger
 from src.samples.extras import SearchEngine, render_report
-from src.samples.msgspec_models import IcebergBenchmarkResult
 from src.samples.pydantic_models import (
     AnalyticsSummary,
     BatchData,
     ConversionFunnel,
+    IcebergBenchmarkResult,
     ProcessingStats,
     UserEvent,
     UserEventResponse,
@@ -224,7 +224,9 @@ async def benchmark_iceberg(
     """
     from performance_test_suite.iceberg_runner import run_iceberg_benchmarks
 
-    return await run_iceberg_benchmarks(s3_path)
+    results = await run_iceberg_benchmarks(s3_path)
+    # Convert msgspec structs to Pydantic models for FastAPI response
+    return [IcebergBenchmarkResult(**msgspec.structs.asdict(r)) for r in results]
 
 
 # =============================================================================

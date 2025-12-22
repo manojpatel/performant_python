@@ -58,3 +58,8 @@ logs/
 
 # Profiling
 profile*
+
+# Rust
+target/
+**/target/
+Cargo.lock

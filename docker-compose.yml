@@ -6,91 +6,196 @@ services:
     build: .
     container_name: performant-python-app
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
     environment:
-      - ENABLE_TRACING=true # Toggle this to false to disable tracing
-      - OTEL_SERVICE_NAME=performant-python
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      # Tracing Sampling Configuration (Optional)
-      # - OTEL_TRACES_SAMPLER=parentbased_traceidratio
-      # - OTEL_TRACES_SAMPLER_ARG=0.1 # Sample 10% of requests
-      - VALKEY_URL=valkey://valkey:6379
-      - POSTGRES_URL=postgresql://performant:secretpass@postgres:5432/analytics
+      - ENABLE_TRACING=false
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-performant-python}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      - VALKEY_URL=valkey://valkey:${VALKEY_PORT:-6379}
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-performant}:${POSTGRES_PASSWORD:-secretpass}@postgres:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-analytics}
       # AWS Credentials for Iceberg S3 Access
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=us-east-1
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     depends_on:
-      - jaeger
-      - valkey
-      - postgres
+
+      valkey:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     volumes:
       - ./src:/app/src
+    networks:
+      - backend-network
     restart: on-failure
 
   valkey:
     image: valkey/valkey:8.0-alpine
     container_name: valkey
-    command: valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: valkey-server --maxmemory 256mb --maxmemory-policy allkeys-lru --port ${VALKEY_PORT:-6379}
     ports:
-      - "6379:6379"
+      - "${VALKEY_PORT:-6379}:${VALKEY_PORT:-6379}"
     volumes:
       - valkey-data:/data
+    networks:
+      - backend-network
     restart: unless-stopped
 
   postgres:
     image: postgres:17-alpine
     container_name: postgres
     environment:
-      - POSTGRES_USER=performant
-      - POSTGRES_PASSWORD=secretpass
-      - POSTGRES_DB=analytics
+      - POSTGRES_USER=${POSTGRES_USER:-performant}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secretpass}
+      - POSTGRES_DB=${POSTGRES_DB:-analytics}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:${POSTGRES_PORT:-5432}"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./db/01-init-dbs.sh:/docker-entrypoint-initdb.d/01-init-dbs.sh
+      - ./db/02-app-schema.sql:/docker-entrypoint-initdb.d/02-app-schema.sql
+    networks:
+      - backend-network
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U performant -d analytics" ]
-      interval: 10s
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-performant} -d ${POSTGRES_DB:-analytics}" ]
+      interval: 5s
       timeout: 5s
       retries: 5
 
   # -------------------------------------------------------------------------
+  # Identity & Authorization Services
+  # -------------------------------------------------------------------------
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:latest
+    container_name: zitadel
+    command: 'start-from-init --masterkey "${ZITADEL_MASTERKEY}" --tlsMode disabled'
+    environment:
+      - ZITADEL_DATABASE_POSTGRES_HOST=postgres
+      - ZITADEL_DATABASE_POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - ZITADEL_DATABASE_POSTGRES_DATABASE=${ZITADEL_DB_NAME:-zitadel}
+      - ZITADEL_DATABASE_POSTGRES_USER_USERNAME=${POSTGRES_USER:-performant}
+      - ZITADEL_DATABASE_POSTGRES_USER_PASSWORD=${POSTGRES_PASSWORD:-secretpass}
+      - ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME=${POSTGRES_USER:-performant}
+      - ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD=${POSTGRES_PASSWORD:-secretpass}
+      - ZITADEL_DATABASE_POSTGRES_SSL_MODE=disable
+      - ZITADEL_EXTERNALSECURE=false
+      - ZITADEL_EXTERNALDOMAIN=127.0.0.1.nip.io
+      - ZITADEL_EXTERNALPORT=${ZITADEL_EXT_PORT:-8081}
+      - ZITADEL_DEFAULTINSTANCE_FEATURES_LOGINV2_REQUIRED=false
+      - ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME=performant-admin
+      - ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD=Password1!
+      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME=zitadel-admin-sa
+      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME=AdminServiceUser
+      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_PATH=/transfer/admin-sa.token
+      # Variations to ensure one works
+      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_USER_USERNAME=zitadel-admin-sa
+      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_USER_NAME=AdminServiceUser
+      - ZITADEL_FIRSTINSTANCE_ORG_MACHINE_USER_PAT_PATH=/transfer/admin-sa.token
+      - ZITADEL_FIRSTINSTANCE_PATPATH=/transfer/admin-sa.token
+      - ZITADEL_PORT=8888
+    ports:
+      - "${ZITADEL_EXT_PORT:-8888}:8888"
+    volumes:
+      - ./transfer:/transfer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      backend-network:
+        aliases:
+          - 127.0.0.1.nip.io
+    restart: unless-stopped
+
+  openfga:
+    image: openfga/openfga:latest
+    container_name: openfga
+    # entrypoint: ["/openfga"] # Default
+    command: run
+    environment:
+      - OPENFGA_DATASTORE_ENGINE=postgres
+      - OPENFGA_DATASTORE_URI=postgres://${POSTGRES_USER:-performant}:${POSTGRES_PASSWORD:-secretpass}@postgres:${POSTGRES_PORT:-5432}/openfga?sslmode=disable
+      - OPENFGA_PLAYGROUND_ENABLED=true
+      - OPENFGA_PLAYGROUND_PORT=${OPENFGA_PLAYGROUND_PORT:-3000}
+    ports:
+      - "${OPENFGA_API_PORT:-8082}:8080" # OpenFGA API
+      - "${OPENFGA_PLAYGROUND_PORT:-3001}:${OPENFGA_PLAYGROUND_PORT:-3000}" # Playground
+      - "${OPENFGA_GRPC_PORT:-8084}:8081" # OpenFGA GRPC
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+  auth-gateway:
+    build:
+      context: ./auth-gateway
+      dockerfile: Dockerfile
+    container_name: auth-gateway
+    environment:
+      - APP_PORT=3000
+      - REDIS_URL=${AUTH_GATEWAY_REDIS_URL}
+      - UPSTREAM_URL=${AUTH_GATEWAY_UPSTREAM_URL}
+      - OPENFGA_URL=${AUTH_GATEWAY_OPENFGA_URL}
+      - OPENFGA_STORE_ID=${OPENFGA_STORE_ID}
+      - ZITADEL_ISSUER_URL=http://127.0.0.1.nip.io:8888
+      - ZITADEL_API_URL=http://127.0.0.1.nip.io:8888
+      - ALLOWED_ORIGINS=${AUTH_GATEWAY_ALLOWED_ORIGINS}
+      - SKIP_JWT_VERIFICATION=true
+    ports:
+      - "3000:3000"
+    depends_on:
+      openfga:
+        condition: service_started
+    networks:
+      - backend-network
+    restart: unless-stopped
+  # -------------------------------------------------------------------------
   # Minimal Observability Stack (Jaeger + OpenSearch)
   # -------------------------------------------------------------------------
 
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    container_name: jaeger
-    environment:
-      - SPAN_STORAGE_TYPE=opensearch
-      - ES_SERVER_URLS=http://opensearch:9200
-      - COLLECTOR_OTLP_ENABLED=true
-    ports:
-      - "16686:16686" # Jaeger UI
-      - "4317:4317" # OTLP gRPC receiver
-      - "4318:4318" # OTLP HTTP receiver
-    depends_on:
-      - opensearch
-    restart: unless-stopped
+  # jaeger:
+  #   image: jaegertracing/all-in-one:latest
+  #   container_name: jaeger
+  #   environment:
+  #     - SPAN_STORAGE_TYPE=opensearch
+  #     - ES_SERVER_URLS=http://opensearch:${OPENSEARCH_PORT:-9200}
+  #     - COLLECTOR_OTLP_ENABLED=true
+  #   ports:
+  #     - "${JAEGER_UI_PORT:-16686}:16686" # Jaeger UI
+  #     - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317" # OTLP gRPC receiver
+  #     - "${JAEGER_OTLP_HTTP_PORT:-4318}:4318" # OTLP HTTP receiver
+  #   depends_on:
+  #     - opensearch
+  #   networks:
+  #     - backend-network
+  #   restart: unless-stopped
 
-  opensearch:
-    image: opensearchproject/opensearch:latest
-    container_name: opensearch
-    environment:
-      - discovery.type=single-node
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - DISABLE_SECURITY_PLUGIN=true
-      - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin@123"
-    ports:
-      - "9200:9200"
-    volumes:
-      - opensearch-data:/usr/share/opensearch/data
-    restart: unless-stopped
+  # opensearch:
+  #   image: opensearchproject/opensearch:latest
+  #   container_name: opensearch
+  #   environment:
+  #     - discovery.type=single-node
+  #     - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+  #     - DISABLE_SECURITY_PLUGIN=true
+  #     - "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin@123"
+  #   ports:
+  #     - "${OPENSEARCH_PORT:-9200}:9200"
+  #   volumes:
+  #     - opensearch-data:/usr/share/opensearch/data
+  #   networks:
+  #     - backend-network
+  #   restart: unless-stopped
 
 volumes:
-  opensearch-data:
+  # opensearch-data:
   valkey-data:
   postgres-data:
+
+
+networks:
+  backend-network:
+    driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-performant_python}_backend-network

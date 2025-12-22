@@ -1,0 +1,49 @@
+[
+    {
+        "path": "/api/*path",
+        "method": "GET",
+        "feature": "feature:report_viewer"
+    },
+    {
+        "path": "/oauth/v2/token",
+        "method": "POST",
+        "feature": "public_access",
+        "target": "zitadel"
+    },
+    {
+        "path": "/v2/users/*path",
+        "method": "*",
+        "feature": "public_access",
+        "target": "zitadel"
+    },
+    {
+        "path": "/zitadel.management.v1.ManagementService/*path",
+        "method": "POST",
+        "feature": "public_access",
+        "target": "zitadel"
+    },
+    {
+        "path": "/management/v1/*path",
+        "method": "*",
+        "feature": "public_access",
+        "target": "zitadel"
+    },
+    {
+        "path": "/auth/v1/users/me",
+        "method": "GET",
+        "feature": "public_access",
+        "target": "zitadel"
+    },
+    {
+        "path": "/debug/healthz",
+        "method": "GET",
+        "feature": "public_access",
+        "target": "zitadel"
+    },
+    {
+        "path": "/stores/*path",
+        "method": "*",
+        "feature": "public_access",
+        "target": "openfga"
+    }
+]

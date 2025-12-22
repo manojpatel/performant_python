@@ -1,0 +1,22 @@
+model
+  schema 1.1
+
+type user
+
+type organization
+  relations
+    define member: [user]
+
+type role
+  relations
+    define assignee: [user]
+
+type feature
+  relations
+    define admin: [user, role#assignee]
+    define manager: [user, role#assignee]
+    define viewer: [user, role#assignee]
+    
+    define delete: admin
+    define edit: admin or manager
+    define view: admin or manager or viewer

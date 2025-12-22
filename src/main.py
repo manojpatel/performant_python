@@ -114,6 +114,58 @@ app.include_router(samples_router, prefix="/samples")
 
 
 # =============================================================================
+# Security Middleware
+# =============================================================================
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+import os
+
+
+class GatewaySecurityMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: Any) -> Any:
+        # Allow health check and other public routes if needed, but strict for /api
+        if request.url.path.startswith("/api"):
+            secret = request.headers.get("X-Gateway-Secret")
+            expected_secret = os.getenv("GATEWAY_SECRET", "super-secret-gateway-key")
+
+            if secret != expected_secret:
+                logger.warning(
+                    "security_alert", reason="invalid_gateway_secret", path=request.url.path
+                )
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Forbidden: Missing or Invalid Gateway Secret"},
+                )
+
+        return await call_next(request)
+
+
+app.add_middleware(GatewaySecurityMiddleware)
+
+# =============================================================================
+# Secured API Endpoints
+# =============================================================================
+
+
+@app.get("/api/finance/reports")
+async def finance_reports(request: Request) -> dict[str, Any]:
+    user_id = request.headers.get("X-User-Id", "unknown")
+    logger.info("accessing_finance_reports", user_id=user_id)
+    return {"report_id": "FIN-2024-Q1", "data": [100, 200, 300, 400], "requested_by": user_id}
+
+
+@app.get("/api/hr/employees")
+async def hr_employees(request: Request) -> dict[str, Any]:
+    user_id = request.headers.get("X-User-Id", "unknown")
+    logger.info("accessing_hr_employees", user_id=user_id)
+    return {
+        "employees": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}],
+        "requested_by": user_id,
+    }
+
+
+# =============================================================================
 # Server Entry Point
 # =============================================================================
 

@@ -1,0 +1,11 @@
+FROM debian:bookworm-slim
+WORKDIR /app
+
+# Copy pre-built binary and config
+COPY target/release/auth-gateway .
+COPY access_rules.json .
+
+# Install ca-certificates for HTTPS
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+CMD ["./auth-gateway"]

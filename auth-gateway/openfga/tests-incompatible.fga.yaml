@@ -1,0 +1,21 @@
+name: Incompatible Tests
+model_file: ./model.fga
+
+tuples:
+  - user: user:bad_actor
+    relation: assignee
+    object: role:viewer
+  
+  - user: role:viewer#assignee
+    relation: viewer
+    object: feature:audit_logs
+
+tests:
+  - name: Viewer should NOT be able to edit (This test expects ALLOWED but model denies)
+    check:
+      - user: user:bad_actor
+        object: feature:audit_logs
+        assertions:
+          # This will fail because the model says viewers cannot edit, 
+          # but we are asserting validation requires 'true' here (simulating a breaking change requirement)
+          edit: true

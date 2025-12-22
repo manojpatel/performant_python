@@ -1,0 +1,17 @@
+# Initial Seed Tuples for OpenFGA Store
+# Format: user, relation, object
+
+tuples:
+  # Assign user:1 (Test User) to 'viewer' role
+  - user: user:1
+    relation: assignee
+    object: role:viewer
+
+  # Assign 'viewer' role to features
+  - user: role:viewer#assignee
+    relation: viewer
+    object: feature:report_viewer
+
+  - user: role:viewer#assignee
+    relation: viewer
+    object: feature:openfga_api

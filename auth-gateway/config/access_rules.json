@@ -1,0 +1,95 @@
+[
+  {
+    "path": "/api/reports/*path",
+    "method": "GET",
+    "feature": "feature:reporting",
+    "action": "view"
+  },
+  {
+    "path": "/api/reports/*path",
+    "method": "POST",
+    "feature": "feature:reporting",
+    "action": "edit"
+  },
+  {
+    "path": "/api/reports/*path",
+    "method": "PUT",
+    "feature": "feature:reporting",
+    "action": "edit"
+  },
+  {
+    "path": "/api/reports/*path",
+    "method": "PATCH",
+    "feature": "feature:reporting",
+    "action": "edit"
+  },
+  {
+    "path": "/api/reports/*path",
+    "method": "DELETE",
+    "feature": "feature:reporting",
+    "action": "delete"
+  },
+  {
+    "path": "/api/*path",
+    "method": "GET",
+    "feature": "feature:api_access",
+    "action": "view"
+  },
+  {
+    "path": "/oauth/v2/token",
+    "method": "POST",
+    "feature": "public_access",
+    "target": "zitadel"
+  },
+  {
+    "path": "/v2/users/*path",
+    "method": "*",
+    "feature": "public_access",
+    "target": "zitadel"
+  },
+  {
+    "path": "/zitadel.management.v1.ManagementService/*path",
+    "method": "POST",
+    "feature": "public_access",
+    "target": "zitadel"
+  },
+  {
+    "path": "/management/v1/*path",
+    "method": "*",
+    "feature": "public_access",
+    "target": "zitadel"
+  },
+  {
+    "path": "/auth/v1/users/me",
+    "method": "GET",
+    "feature": "public_access",
+    "target": "zitadel"
+  },
+  {
+    "path": "/debug/healthz",
+    "method": "GET",
+    "feature": "public_access",
+    "target": "zitadel"
+  },
+  {
+    "path": "/webhooks/user-created",
+    "method": "POST",
+    "feature": "public_access"
+  },
+  {
+    "path": "/webhooks/user-updated",
+    "method": "POST",
+    "feature": "public_access"
+  },
+  {
+    "path": "/webhooks/user-deleted",
+    "method": "POST",
+    "feature": "public_access"
+  },
+  {
+    "path": "/stores/*path",
+    "method": "*",
+    "feature": "public_access",
+    "target": "openfga"
+  }
+]
