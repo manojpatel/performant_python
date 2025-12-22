@@ -63,3 +63,6 @@ profile*
 target/
 **/target/
 Cargo.lock
+
+# OpenFGA
+openfga_store.id
